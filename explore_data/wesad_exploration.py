@@ -1,12 +1,13 @@
+#wesad_exploration
 import pickle
 import os
 import numpy as np
 import pandas as pd
 
 # data path
-DATA_PATH = r"C:\Users\eduar\Desktop\TCC-Códigos\Git-TCC\PsicoCare\dataset\WESAD"
+DATA_PATH = r"C:\Users\eduar\OneDrive\Desktop\maua26\TCC-Códigos\Git-TCC\PsicoCare\dataset\WESAD"
 # carregamos 5 sujeito para a amostra
-subjects = ["S2", "S3", "S4", "S5", "S6"]
+subjects = ["S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10","S11","S12","S13","S14","S15","S16","S17"]
 
 rows = []
 
