@@ -18,7 +18,7 @@ import { API_URL } from '../../services/api';
 
 const USAR_MOCK = true; 
 
-const VisaoGeral = () => {
+const VisaoGeral = ({ navigation }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('semana');
   const [searchText, setSearchText] = useState('');
   const [pacientes, setPacientes] = useState([]);
@@ -207,9 +207,9 @@ const handleVerProntuario = (paciente) => {
               onChangeText={setSearchText}
             />
           </View>
-          <TouchableOpacity style={styles.configButton}>
-            <Icon name="settings" size={24} color="#4B5563" />
-          </TouchableOpacity>
+        <TouchableOpacity style={styles.configButton} onPress={() => navigation.navigate('Configuracoes')}>
+          <Icon name="settings" size={24} color="#4B5563" />
+        </TouchableOpacity>
         </View>
 
         <View style={styles.titleContainer}>
@@ -320,14 +320,14 @@ const handleVerProntuario = (paciente) => {
           </View>
         </View>
 
-        <View style={styles.configContaContainer}>
-          <TouchableOpacity style={styles.configContaButton}>
-            <Icon name="sliders" size={20} color="#6366F1" />
-            <Text style={styles.configContaText}>Configurações</Text>
-            <Text style={styles.configContaSubtext}>AJUSTES DA CONTA</Text>
-            <Icon name="chevron-right" size={20} color="#9CA3AF" style={styles.chevronIcon} />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.configContaContainer}>
+        <TouchableOpacity style={styles.configContaButton} onPress={() => navigation.navigate('Configuracoes')}>            
+          <Icon name="sliders" size={20} color="#6366F1" />
+          <Text style={styles.configContaText}>Configurações</Text>
+          <Text style={styles.configContaSubtext}>AJUSTES DA CONTA</Text>
+          <Icon name="chevron-right" size={20} color="#9CA3AF" style={styles.chevronIcon} />
+        </TouchableOpacity>
+      </View>
       </ScrollView>
     </SafeAreaView>
   );

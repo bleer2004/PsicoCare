@@ -9,13 +9,17 @@ const TABLE_NAME = "PsicoCare";
 export const handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
-    const { email, password } = body;
+    // Limpeza básica dos inputs
+    const email = body.email ? body.email.trim().toLowerCase() : null;
+    const password = body.password ? body.password : null;
 
     if (!email || !password) {
-      return response(400, { error: "Email e senha são obrigatórios" });
+      return response(400, { error: "E-mail e senha são obrigatórios." });
     }
 
-    // Busca usuário pelo email no GSI1
+    console.log(`Tentativa de login para: EMAIL#${email}`);
+
+    // 1. Busca o usuário pelo email usando o GSI
     const result = await dynamo.send(new QueryCommand({
       TableName: TABLE_NAME,
       IndexName: "GSI1PK-GSI1SK-index",
@@ -26,23 +30,29 @@ export const handler = async (event) => {
     }));
 
     if (!result.Items || result.Items.length === 0) {
-      return response(401, { error: "Email ou senha inválidos" });
+      console.log("Usuário não encontrado no GSI1PK");
+      return response(401, { error: "E-mail ou senha incorretos." });
     }
 
     const user = result.Items[0];
+    const hashNoBanco = user.data?.passwordHash;
 
-    // Valida senha usando SHA-256 (Igual ao seu cadastro)
+    // 2. Valida a senha usando SHA-256 (Padrão que o seu banco já possui)
     const loginPasswordHash = crypto
       .createHash("sha256")
       .update(password)
       .digest("hex");
 
-    if (loginPasswordHash !== user.data.passwordHash) {
-      return response(401, { error: "Email ou senha inválidos" });
+    console.log("Comparando hashes...");
+    if (loginPasswordHash !== hashNoBanco) {
+      console.log("Senha não confere.");
+      return response(401, { error: "E-mail ou senha incorretos." });
     }
 
-    // Extrai id
+    // 3. Extrai o ID real do usuário (Removendo o prefixo CLINICIAN#)
     const userId = user.PK.split("#")[1];
+
+    console.log("Login bem-sucedido para o ID:", userId);
 
     return response(200, {
       message: "Login realizado com sucesso",
@@ -50,13 +60,13 @@ export const handler = async (event) => {
         id: userId,
         name: user.data.name,
         email: user.data.email,
-        type: user.type
+        type: user.type || "CLINICIAN"
       }
     });
 
   } catch (err) {
-    console.error("Erro no login:", err);
-    return response(500, { error: err.message });
+    console.error("ERRO_NO_LOGIN:", err);
+    return response(500, { error: "Erro interno no servidor de autenticação." });
   }
 };
 
@@ -64,7 +74,8 @@ const response = (statusCode, body) => ({
   statusCode,
   headers: {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*"
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
   },
   body: JSON.stringify(body)
 });

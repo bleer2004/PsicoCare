@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { API_URL } from '../../services/api';
+
 import {
   View,
   Text,
@@ -31,70 +33,84 @@ const RecuperarSenha = ({ navigation }) => {
       Alert.alert('Erro', 'Por favor, digite seu e-mail profissional');
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Erro', 'Digite um e-mail válido');
       return;
     }
-
     setLoading(true);
-    
-    //simula o envio de e-mail
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
       setStep(2);
-      Alert.alert(
-        'Código enviado!',
-        'Enviamos um código de verificação para seu e-mail profissional. Verifique sua caixa de entrada ou spam.',
-        [{ text: 'OK', onPress: () => console.log('Código enviado') }]
-      );
-    }, 1500);
+      Alert.alert('Código enviado!', 'Verifique sua caixa de entrada ou spam.');
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerificarCodigo = () => {
-    if (!codigo) {
-      Alert.alert('Erro', 'Por favor, digite o código de verificação');
-      return;
-    }
-
-    if (codigo.length !== 6) {
+  const handleVerificarCodigo = async () => {
+    if (!codigo || codigo.length !== 6) {
       Alert.alert('Erro', 'O código deve ter 6 dígitos');
       return;
     }
-
     setLoading(true);
-    
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await fetch(`${API_URL}/auth/verify-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codigo }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Código inválido ou expirado');
+        return;
+      }
       setStep(3);
       Alert.alert('Código verificado!', 'Agora você pode criar uma nova senha');
-    }, 1500);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRedefinirSenha = () => {
-    // Validações da senha
+  const handleRedefinirSenha = async () => {
     if (!novaSenha || !confirmarSenha) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
       return;
     }
-
     if (novaSenha !== confirmarSenha) {
       Alert.alert('Erro', 'As senhas não coincidem');
       return;
     }
-
     if (novaSenha.length < 6) {
       Alert.alert('Erro', 'A senha deve ter no mínimo 6 caracteres');
       return;
     }
-
     setLoading(true);
-    
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codigo, newPassword: novaSenha }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Erro ao redefinir senha');
+        return;
+      }
       setShowSuccessModal(true);
-    }, 1500);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVoltarLogin = () => {

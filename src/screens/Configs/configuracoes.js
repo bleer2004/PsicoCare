@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Platform } from 'react-native'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../services/api';
+
 import {
   View,
   Text,
@@ -18,21 +22,21 @@ import Icon from 'react-native-vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'react-native-image-picker';
 
-const Configuracoes = ({ navigation }) => {
-  const [nome, setNome] = useState('Dra. Ana Beatriz');
-  const [sobrenome, setSobrenome] = useState('Costa');
-  const [email, setEmail] = useState('ana.beatriz@psicocare.com');
-  const [telefone, setTelefone] = useState('(11) 98765-4321');
-  const [celular, setCelular] = useState('(11) 91234-5678');
-  const [dataNascimento, setDataNascimento] = useState('15/03/1985');
+  const Configuracoes = ({ navigation }) => {
+  const [nome, setNome] = useState('');
+  const [sobrenome, setSobrenome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [celular, setCelular] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  const [profissao, setProfissao] = useState('psicologo');
-  const [registroProfissional, setRegistroProfissional] = useState('CRP 06/123456');
-  const [especialidade, setEspecialidade] = useState('Terapia Cognitivo-Comportamental');
-  const [clinica, setClinica] = useState('NeuroCare Clínica');
-  const [enderecoClinica, setEnderecoClinica] = useState('Rua das Flores, 123 - São Paulo, SP');
-  
+
+  const [profissao, setProfissao] = useState('');
+  const [registroProfissional, setRegistroProfissional] = useState('');
+  const [especialidade, setEspecialidade] = useState('');
+  const [clinica, setClinica] = useState('');
+
+  const [enderecoClinica, setEnderecoClinica] = useState('');
   const [notificacoes, setNotificacoes] = useState(true);
   const [emailPromocoes, setEmailPromocoes] = useState(false);
   const [biometria, setBiometria] = useState(true);
@@ -68,6 +72,74 @@ const Configuracoes = ({ navigation }) => {
     'Psiquiatria Infantil',
   ];
 
+  const [clinicianId, setClinicianId] = useState(null);
+
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  const carregarDados = async () => {
+  try {
+    const userStr = await AsyncStorage.getItem('user');
+    const token = await AsyncStorage.getItem('token');
+    const user = JSON.parse(userStr);
+
+    // Salva o ID que veio do storage no estado para usar depois no PUT
+    if (user && user.id) {
+      setClinicianId(user.id);
+    }
+
+    const response = await fetch(`${API_URL}/clinicians/${user.id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    console.log('DATA API:', data);
+
+    if (response.ok) {
+      const nomeCompleto = data.name || '';
+      const partes = nomeCompleto.trim().split(' ');
+      const primeiroNome = partes[0] || '';
+      const restoDoNome = partes.slice(1).join(' ') || '';
+
+      setNome(primeiroNome);
+      setSobrenome(restoDoNome); 
+
+      setEmail(data.email || '');
+      setTelefone(formatTelefone(data.phone || ''));
+      setCelular(formatTelefone(data.phone || ''));
+
+      setRegistroProfissional(data.councilId || '');
+      setProfissao(data.profession || '');
+
+      setDataNascimento(formatDate(data.birthDate));
+      setEspecialidade(data.especialidade || '');
+      setClinica(data.clinica || '');
+      setEnderecoClinica(data.enderecoClinica || '');
+    }
+
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+ const formatDate = (dateString) => {
+  if (!dateString) return '';
+
+  const date = new Date(dateString);
+
+  if (isNaN(date)) return dateString;
+
+  const dia = String(date.getUTCDate()).padStart(2, '0');
+  const mes = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const ano = date.getUTCFullYear();
+
+  return `${dia}/${mes}/${ano}`;
+};
+
   const formatTelefone = (text) => {
     let cleaned = text.replace(/\D/g, '');
     if (cleaned.length <= 11) {
@@ -84,13 +156,17 @@ const Configuracoes = ({ navigation }) => {
     return text;
   };
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const formattedDate = `${selectedDate.getDate().toString().padStart(2, '0')}/${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
-      setDataNascimento(formattedDate);
-    }
-  };
+const handleDateChange = (event, selectedDate) => {
+  setShowDatePicker(false);
+  if (selectedDate) {
+    // Para exibição no input (DD/MM/AAAA)
+    const dia = selectedDate.getDate().toString().padStart(2, '0');
+    const mes = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+    const ano = selectedDate.getFullYear();
+    
+    setDataNascimento(`${dia}/${mes}/${ano}`);
+  }
+};
 
   const handleEscolherImagem = () => {
     ImagePicker.launchImageLibrary({ mediaType: 'photo' }, (response) => {
@@ -100,22 +176,122 @@ const Configuracoes = ({ navigation }) => {
     });
   };
 
-  const handleSalvarAlteracoes = () => {
-    setLoading(true);
+ const formatDateToAPI = (dateBR) => {
+  if (!dateBR) return null;
+
+  const [dia, mes, ano] = dateBR.split('/');
+  return `${ano}-${mes}-${dia}`; 
+};
+
+const validarEmail = (email) => {
+  if (!email) return false;
+
+  // regex simples e eficiente (não exagerada)
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  return regex.test(email);
+};
+
+const handleSalvarAlteracoes = async () => {
+  try {
     
-    if (novaSenha && novaSenha !== confirmarSenha) {
-      Alert.alert('Erro', 'As novas senhas não coincidem');
-      setLoading(false);
+    if (!validarEmail(email)) {
+      Alert.alert('Erro', 'Digite um e-mail válido (ex: nome@email.com)');
       return;
     }
 
-    // Simular salvamento
-    setTimeout(() => {
-      setLoading(false);
-      setEditMode(false);
-      Alert.alert('Sucesso', 'Suas informações foram atualizadas!');
-    }, 1500);
-  };
+    setLoading(true);
+    const token = await AsyncStorage.getItem('token');
+
+    // --- 1. ATUALIZAR PERFIL (PUT) ---
+    const profileBody = {
+      name: `${nome} ${sobrenome}`.trim(),
+      email: email.trim(),
+      phone: telefone.replace(/\D/g, ''),
+      councilId: registroProfissional,
+      profession: profissao,
+      birthDate: dataNascimento ? formatDateToAPI(dataNascimento) : null,
+      especialidade,
+      clinica,
+      enderecoClinica
+    };
+
+    const profileResponse = await fetch(`${API_URL}/clinicians/${clinicianId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(profileBody)
+    });
+
+    if (!profileResponse.ok) {
+      const errorData = await profileResponse.json();
+      throw new Error(errorData.error || 'Erro ao atualizar perfil');
+    }
+
+    // --- 2. ATUALIZAR SENHA (POST) - SÓ SE O USUÁRIO DIGITOU NOVA SENHA ---
+    if (novaSenha && novaSenha.trim().length > 0) {
+      if (!senhaAtual) {
+        Alert.alert('Atenção', 'Informe a senha atual para definir uma nova.');
+        setLoading(false);
+        return;
+      }
+
+      if (novaSenha !== confirmarSenha) {
+        Alert.alert('Erro', 'A nova senha e a confirmação não coincidem.');
+        setLoading(false);
+        return;
+      }
+
+      const passwordResponse = await fetch(`${API_URL}/clinicians/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          clinicianId: clinicianId,
+          currentPassword: senhaAtual.trim(), // Enviando sem espaços
+          newPassword: novaSenha.trim()
+        })
+      });
+
+      if (!passwordResponse.ok) {
+        const passError = await passwordResponse.json();
+        throw new Error(passError.error || 'A senha atual está incorreta.');
+      }
+    }
+
+    // --- 3. SUCESSO E ATUALIZAÇÃO LOCAL ---
+    Alert.alert('Sucesso', 'As alterações foram salvas!');
+    
+    // Atualiza o AsyncStorage para o e-mail refletir no app todo
+    const userStr = await AsyncStorage.getItem('user');
+    if (userStr) {
+      const userObj = JSON.parse(userStr);
+      const updatedUser = { 
+        ...userObj, 
+        email: email.trim(), 
+        name: `${nome} ${sobrenome}`.trim() 
+      };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+
+    // Limpa campos de senha para não disparar erro no próximo save
+    setSenhaAtual('');
+    setNovaSenha('');
+    setConfirmarSenha('');
+    
+    setEditMode(false);
+    await carregarDados(); // Recarrega da API para garantir que o front está igual ao banco
+
+  } catch (err) {
+    Alert.alert('Erro', err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const renderInfoRow = (label, value, icon, onEdit) => (
     <View style={styles.infoRow}>
@@ -134,8 +310,7 @@ const Configuracoes = ({ navigation }) => {
     </View>
   );
 
-  const renderInputField = (label, value, onChangeText, icon, keyboardType = 'default', placeholder = '') => (
-    <View style={styles.inputContainer}>
+  const renderInputField = (label, value, onChangeText, icon, keyboardType = 'default', placeholder = '', isPassword = false) => (    <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
       <View style={styles.inputWrapper}>
         <Icon name={icon} size={20} color="#9CA3AF" style={styles.inputIcon} />
@@ -146,6 +321,7 @@ const Configuracoes = ({ navigation }) => {
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
+          secureTextEntry={isPassword}
           editable={editMode}
         />
       </View>
@@ -355,17 +531,23 @@ const Configuracoes = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Segurança</Text>
-          
-          {renderInputField('Senha atual', senhaAtual, setSenhaAtual, 'lock', 'default', 'Digite sua senha atual', true)}
-          {renderInputField('Nova senha', novaSenha, setNovaSenha, 'lock', 'default', 'Digite sua nova senha', true)}
-          {renderInputField('Confirmar senha', confirmarSenha, setConfirmarSenha, 'lock', 'default', 'Confirme sua nova senha', true)}
-        </View>
+       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Segurança</Text>
+        
+        {renderInputField('Senha atual', senhaAtual, setSenhaAtual, 'lock', 'default', 'Digite sua senha atual', true)}
+        {renderInputField('Nova senha', novaSenha, setNovaSenha, 'lock', 'default', 'Digite sua nova senha', true)}
+        {renderInputField('Confirmar senha', confirmarSenha, setConfirmarSenha, 'lock', 'default', 'Confirme sua nova senha', true)}
+      </View>
 
         {/* Ações da Conta */}
         <View style={styles.actionsSection}>
-          <TouchableOpacity style={styles.logoutButton}>
+         <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={async () => {
+              await AsyncStorage.clear();
+              navigation.replace('LoginSignedUp');
+            }}
+          >
             <Icon name="log-out" size={20} color="#EF4444" />
             <Text style={styles.logoutText}>Sair da conta</Text>
           </TouchableOpacity>
