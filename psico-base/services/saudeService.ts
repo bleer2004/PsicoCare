@@ -39,8 +39,10 @@ export async function solicitarPermissoes() {
     console.log("5. Faltando:", faltando.map(p => p.recordType));
 
     if (faltando.length > 0) {
-      console.log("6. Chamando requestPermission...");
-      await requestPermission(faltando);
+      console.log("6. Chamando requestPermission TESTE...");
+      await requestPermission([
+        { accessType: 'read', recordType: 'Steps' }
+      ]);      
       console.log("7. requestPermission retornou!");
     } else {
       console.log("✅ Todas as permissões já concedidas!");

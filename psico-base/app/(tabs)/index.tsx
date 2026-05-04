@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Button, ScrollView, StyleSheet, SafeAreaView, AppState } from 'react-native';
+import { View, Text, Button, ScrollView, StyleSheet, AppState } from 'react-native';
 import { getDadosSaude, solicitarPermissoes } from '../../services/saudeService';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index() {
   const [dados, setDados] = useState<any>(null);
