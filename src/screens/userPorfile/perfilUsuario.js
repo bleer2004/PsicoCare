@@ -18,6 +18,16 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { LineChart } from 'react-native-chart-kit';
 
+  import RelatoriosPaciente from './relatoriosPaciente';
+  import ArquivosPaciente from './arquivosPaciente';
+  import SmartwatchPaciente from './smartwatchPaciente';
+
+
+  const renderAbaRelatorios = () => <RelatoriosPaciente paciente={paciente} standalone={true} />;
+
+  const [abaAtiva, setAbaAtiva] = useState('visao');
+  const [abaAtiva, setAbaAtiva] = useState('perfil'); 
+
 const DashboardPaciente = ({ navigation, route }) => {
   const screenWidth = Dimensions.get('window').width;
   const [loading, setLoading] = useState(true);
@@ -153,6 +163,11 @@ const DashboardPaciente = ({ navigation, route }) => {
     );
   };
 
+  const renderAbaRelatorios = () => <RelatoriosPaciente paciente={paciente} standalone={true} />;
+
+  const renderAbaSmartwatch = () => <SmartwatchPaciente paciente={paciente} standalone={true} />;
+  
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
@@ -170,6 +185,38 @@ const DashboardPaciente = ({ navigation, route }) => {
           <TouchableOpacity onPress={handleExportarRelatorio} style={styles.exportButton}>
             <Icon name="download" size={20} color="#6366F1" />
             <Text style={styles.exportText}>Exportar</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, abaAtiva === 'perfil' && styles.tabActive]}
+            onPress={() => setAbaAtiva('perfil')}
+          >
+            <Icon name="user" size={18} color={abaAtiva === 'perfil' ? '#6366F1' : '#9CA3AF'} />
+            <Text style={[styles.tabText, abaAtiva === 'perfil' && styles.tabTextActive]}>
+              Perfil
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tab, abaAtiva === 'relatorios' && styles.tabActive]}
+            onPress={() => setAbaAtiva('relatorios')}
+          >
+            <Icon name="bar-chart-2" size={18} color={abaAtiva === 'relatorios' ? '#6366F1' : '#9CA3AF'} />
+            <Text style={[styles.tabText, abaAtiva === 'relatorios' && styles.tabTextActive]}>
+              Relatórios
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tab, abaAtiva === 'smartwatch' && styles.tabActive]}
+            onPress={() => setAbaAtiva('smartwatch')}
+          >
+            <Icon name="watch" size={18} color={abaAtiva === 'smartwatch' ? '#6366F1' : '#9CA3AF'} />
+            <Text style={[styles.tabText, abaAtiva === 'smartwatch' && styles.tabTextActive]}>
+              Smartwatch
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -345,6 +392,8 @@ const DashboardPaciente = ({ navigation, route }) => {
         </View>
       </ScrollView>
     </SafeAreaView>
+
+    
   );
 };
 
