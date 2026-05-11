@@ -44,7 +44,7 @@ const LoginPaciente = ({ navigation }) => {
     setTimeout(() => {
       setLoading(false);
       Alert.alert('Sucesso', 'Login realizado com sucesso!');
-      // navigation.navigate('HomePaciente');
+      navigation.navigate('HomePaciente');
     }, 1500);
   };
 

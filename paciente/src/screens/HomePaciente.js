@@ -9,6 +9,8 @@ import {
   ScrollView,
   Image,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LineChart } from 'react-native-chart-kit';
@@ -17,6 +19,7 @@ import { Dimensions } from 'react-native';
 const HomePaciente = ({ navigation }) => {
   const screenWidth = Dimensions.get('window').width;
   const [selectedMood, setSelectedMood] = useState(null);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
 
   const moods = [
     { id: 'feliz', label: 'Feliz', color: '#E3F2FD', iconColor: '#2563EB', icon: 'smile' },
@@ -31,6 +34,42 @@ const HomePaciente = ({ navigation }) => {
     { id: '2', titulo: '2L de água', concluido: true },
     { id: '3', titulo: 'Caminhada de 30 minutos', concluido: false },
   ];
+
+  // Dados de exemplo para notificações
+  const [notificacoes, setNotificacoes] = useState([
+    {
+      id: '1',
+      titulo: 'Nova mensagem do psicólogo',
+      mensagem: 'Dr. Robinson enviou uma nova mensagem para você',
+      data: 'Hoje, 10:30',
+      lida: false,
+      icon: 'message-circle',
+    },
+    {
+      id: '2',
+      titulo: 'Meta concluída!',
+      mensagem: 'Parabéns! Você concluiu a meta "10 min de meditação"',
+      data: 'Ontem, 18:45',
+      lida: false,
+      icon: 'check-circle',
+    },
+    {
+      id: '3',
+      titulo: 'Lembrete: Atividade diária',
+      mensagem: 'Não se esqueça de registrar seu humor hoje',
+      data: 'Ontem, 09:00',
+      lida: true,
+      icon: 'bell',
+    },
+    {
+      id: '4',
+      titulo: 'Relatório semanal disponível',
+      mensagem: 'Seu relatório de progresso da semana está pronto',
+      data: '15/05/2024',
+      lida: true,
+      icon: 'bar-chart-2',
+    },
+  ]);
 
   const dadosGrafico = {
     labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
@@ -56,10 +95,52 @@ const HomePaciente = ({ navigation }) => {
     );
   };
 
+  const handleNotificationPress = () => {
+    setNotificationsVisible(true);
+  };
+
+  const handleMarkAsRead = (id) => {
+    setNotificacoes(notificacoes.map(notif => 
+      notif.id === id ? { ...notif, lida: true } : notif
+    ));
+  };
+
+  const handleClearNotifications = () => {
+    Alert.alert(
+      'Limpar notificações',
+      'Deseja limpar todas as notificações?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Limpar', onPress: () => setNotificacoes([]) }
+      ]
+    );
+  };
+
+  const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
+
   const calcularProgresso = () => {
     const concluidas = metas.filter(m => m.concluido).length;
     return Math.round((concluidas / metas.length) * 100);
   };
+
+  const renderNotificacaoItem = ({ item }) => (
+    <TouchableOpacity 
+      style={[styles.notificacaoItem, !item.lida && styles.notificacaoItemNaoLida]}
+      onPress={() => handleMarkAsRead(item.id)}
+    >
+      <View style={styles.notificacaoIcon}>
+        <Icon name={item.icon} size={20} color={!item.lida ? '#B367D4' : '#94A3B8'} />
+      </View>
+      <View style={styles.notificacaoContent}>
+        <Text style={[styles.notificacaoTitulo, !item.lida && styles.notificacaoTituloNaoLida]}>
+          {item.titulo}
+        </Text>
+        <Text style={styles.notificacaoMensagem}>{item.mensagem}</Text>
+        <Text style={styles.notificacaoData}>{item.data}</Text>
+      </View>
+      {!item.lida && <View style={styles.notificacaoDot} />}
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,7 +151,7 @@ const HomePaciente = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header com Avatar */}
+        {/* Header com Avatar e Notificações */}
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarBorder}>
@@ -86,8 +167,13 @@ const HomePaciente = ({ navigation }) => {
             <Text style={styles.greeting}>Olá, espero que esteja tendo um bom dia,</Text>
             <Text style={styles.userName}>Sarah Mitchell</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationPress}>
             <Icon name="bell" size={20} color="#475569" />
+            {notificacoesNaoLidas > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{notificacoesNaoLidas}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -150,7 +236,7 @@ const HomePaciente = ({ navigation }) => {
         </View>
 
         {/* Anotações diárias */}
-        <TouchableOpacity style={styles.notesCard}>
+        <TouchableOpacity style={styles.notesCard} onPress={() => navigation.navigate('DiarioPaciente')}>
           <View style={styles.notesIconWrapper}>
             <Icon name="edit-2" size={18} color="#B367D4" />
           </View>
@@ -162,7 +248,7 @@ const HomePaciente = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Progresso de metas */}
-        <View style={styles.goalsCard}>
+        <TouchableOpacity style={styles.goalsCard} onPress={() => navigation.navigate('MetasPaciente')}>
           <View style={styles.goalsHeader}>
             <Text style={styles.goalsTitle}>Progresso de metas</Text>
             <Text style={styles.goalsPercentage}>{calcularProgresso()}%</Text>
@@ -184,7 +270,7 @@ const HomePaciente = ({ navigation }) => {
           <View style={styles.progressBarContainer}>
             <View style={[styles.progressBar, { width: `${calcularProgresso()}%` }]} />
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Gráfico semanal */}
         <View style={styles.chartSection}>
@@ -212,24 +298,71 @@ const HomePaciente = ({ navigation }) => {
         </View>
       </ScrollView>
 
+      {/* Modal de Notificações */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={notificationsVisible}
+        onRequestClose={() => setNotificationsVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Notificações</Text>
+              <View style={styles.modalHeaderActions}>
+                {notificacoes.length > 0 && (
+                  <TouchableOpacity onPress={handleClearNotifications}>
+                    <Text style={styles.clearAllText}>Limpar tudo</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => setNotificationsVisible(false)}>
+                  <Icon name="x" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {notificacoes.length === 0 ? (
+              <View style={styles.emptyNotifications}>
+                <Icon name="bell-off" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyNotificationsTitle}>Nenhuma notificação</Text>
+                <Text style={styles.emptyNotificationsText}>
+                  Você não tem notificações no momento
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notificacoes}
+                keyExtractor={(item) => item.id}
+                renderItem={renderNotificacaoItem}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.notificacoesList}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+        <TouchableOpacity 
+          style={[styles.navItem, styles.navItemActive]} 
+          onPress={() => navigation.navigate('HomePaciente')}
+        >
           <Icon name="home" size={20} color="#B367D4" />
           <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('DiarioPaciente')}>
           <Icon name="book-open" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Diário</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('MetasPaciente')}>
           <Icon name="target" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Metas</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PerfilPaciente')}>
           <Icon name="user" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Perfil</Text>
         </TouchableOpacity>
@@ -311,6 +444,25 @@ const styles = StyleSheet.create({
     elevation: 1,
     borderWidth: 1,
     borderColor: '#F2EEF6',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   moodSection: {
     paddingHorizontal: 16,
@@ -633,6 +785,124 @@ const styles = StyleSheet.create({
   navTextActive: {
     color: '#B367D4',
     fontWeight: '700',
+  },
+  // Estilos do Modal de Notificações
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  clearAllText: {
+    fontSize: 12,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#EF4444',
+  },
+  notificacoesList: {
+    padding: 16,
+  },
+  notificacaoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  notificacaoItemNaoLida: {
+    backgroundColor: '#FAFAFF',
+    borderLeftWidth: 3,
+    borderLeftColor: '#B367D4',
+  },
+  notificacaoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notificacaoContent: {
+    flex: 1,
+  },
+  notificacaoTitulo: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  notificacaoTituloNaoLida: {
+    color: '#1F2937',
+  },
+  notificacaoMensagem: {
+    fontSize: 13,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  notificacaoData: {
+    fontSize: 10,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#D1D5DB',
+  },
+  notificacaoDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#B367D4',
+    marginLeft: 8,
+    marginTop: 4,
+  },
+  emptyNotifications: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyNotificationsTitle: {
+    fontSize: 16,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyNotificationsText: {
+    fontSize: 12,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });
 

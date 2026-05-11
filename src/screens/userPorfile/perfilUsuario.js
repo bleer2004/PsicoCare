@@ -21,7 +21,7 @@ import {
 import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/Feather';
 
-import RelatoriosPaciente from '../Files/RelatoriosPaciente';
+import RelatoriosPaciente from '../Files/RelatoriosPsicologo';
 import SmartwatchPaciente from '../smartwatch/SmartWatchPaciente';
 
 const DashboardPaciente = ({ navigation, route }) => {
