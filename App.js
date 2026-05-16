@@ -12,21 +12,24 @@ import DashboardPaciente from './src/screens/userPorfile/perfilUsuario';
 import CadastroPaciente from './src/screens/userSignUp/cadastroPaciente';
 import Configuracoes from './src/screens/Configs/configuracoes';
 import Relatorios from './src/screens/Files/RelatoriosPsicologo';
+import LoginSignedUp from './src/screens/loginSignedUp';
+import RecuperarSenha from './src/screens/setUpPassword/recuperarSenha';
+import Cadastro from './src/screens/signUpForm/cadastro';
 
 // Telas do Paciente (corrigindo o caminho)
 import LoginPaciente from './paciente/src/screens/LoginPaciente';
 import HomePaciente from './paciente/src/screens/HomePaciente';
 import MetasPaciente from './paciente/src/screens/MetasPaciente';
 import DiarioPaciente from './paciente/src/screens/DiarioPaciente';
-import PerfilPaciente from './paciente/src/screens/PerfilPaciente';
+import PerfilPaciente from './paciente/src/screens/perfilPaciente';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="AmbienteTeste">
-        <Stack.Screen name="AmbienteTeste" component={AmbienteTeste} options={{ headerShown: false }} />
+      <Stack.Navigator initialRouteName="">
+        <Stack.Screen name="LoginSignedUp" component={LoginSignedUp} options={{ headerShown: false }} />
         
         {/* Telas do Psicólogo */}
         <Stack.Screen name="VisaoGeral" component={VisaoGeral} options={{ headerShown: false }} />
@@ -35,7 +38,9 @@ export default function App() {
         <Stack.Screen name="CadastroPaciente" component={CadastroPaciente} options={{ headerShown: false }} />
         <Stack.Screen name="Configuracoes" component={Configuracoes} options={{ headerShown: false }} />
         <Stack.Screen name="Relatorios" component={Relatorios} options={{ headerShown: false }} />
-        
+        <Stack.Screen name="RecuperarSenha" component={RecuperarSenha} options={{ headerShown: false }} />
+        <Stack.Screen name="Cadastro" component={Cadastro} options={{ headerShown: false }} />
+
         {/* Telas do Paciente */}
         <Stack.Screen name="LoginPaciente" component={LoginPaciente} options={{ headerShown: false }} />
         <Stack.Screen name="HomePaciente" component={HomePaciente} options={{ headerShown: false }} />

@@ -24,11 +24,11 @@ export const handler = async (event) => {
     }));
 
     const goals = result.Items.map(item => ({
-      id: item.SK.split("#")[1], 
-      titulo: item.data.title, 
-      progresso: item.data.progress, 
-      status: item.data.status, 
-      category: item.data.category, 
+      id: item.SK.split("#")[1],
+      titulo: item.titulo,
+      progresso: item.progresso,
+      status: item.status,
+      prazo: item.prazo || 'Sem prazo definido',
       createdAt: item.createdAt
     }));
 

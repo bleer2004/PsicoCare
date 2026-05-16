@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../services/api';
+import Icon from 'react-native-vector-icons/Feather';
+
 import {
   View,
   Text,
@@ -13,100 +17,87 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+
+const USAR_MOCK = false;
+
+const calcularIdade = (birthDate) => {
+  if (!birthDate) return 0;
+  const hoje = new Date();
+  const nascimento = new Date(birthDate);
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const m = hoje.getMonth() - nascimento.getMonth();
+  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+  return idade;
+};
 
 const Pacientes = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [activeFilter, setActiveFilter] = useState('todos');
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const [pacientesData, setPacientesData] = useState([]);
+
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [diagnostico, setDiagnostico] = useState('');
   const [resumoClinico, setResumoClinico] = useState('');
 
-  // Dados mockados dos pacientes
-  const [pacientesData, setPacientesData] = useState([
-    {
-      id: '1',
-      nome: 'Ana Clara Silva',
-      ultimaSessao: 'Ontem, 14:00',
-      status: 'ativo',
-      idade: 32,
-      diagnosticoPrincipal: 'F41.1 - Transtorno de Ansiedade Generalizada (TAG)',
-      condicao: 'Anorexia',
-      statusEmocional: 'Estável',
-      melhoraPercentual: 15,
-    },
-    {
-      id: '2',
-      nome: 'Marcos Oliveira',
-      ultimaSessao: '12 Out, 10:30',
-      status: 'ativo',
-      idade: 45,
-      diagnosticoPrincipal: 'F32.2 - Transtorno Depressivo Maior',
-      condicao: 'Depressão',
-      statusEmocional: 'Instável',
-      melhoraPercentual: 8,
-    },
-    {
-      id: '3',
-      nome: 'Beatriz Santos',
-      ultimaSessao: '10 Out, 16:15',
-      status: 'inativo',
-      idade: 28,
-      diagnosticoPrincipal: 'F40.1 - Fobia Social',
-      condicao: 'Fobia Social',
-      statusEmocional: 'Estável',
-      melhoraPercentual: 22,
-    },
-    {
-      id: '4',
-      nome: 'Ricardo Pereira',
-      ultimaSessao: '08 Out, 09:00',
-      status: 'ativo',
-      idade: 51,
-      diagnosticoPrincipal: 'F41.0 - Transtorno de Pânico',
-      condicao: 'Pânico',
-      statusEmocional: 'Estável',
-      melhoraPercentual: 12,
-    },
-    {
-      id: '5',
-      nome: 'Juliana Farias',
-      ultimaSessao: '05 Out, 11:30',
-      status: 'inativo',
-      idade: 37,
-      diagnosticoPrincipal: 'F42.0 - Transtorno Obsessivo-Compulsivo',
-      condicao: 'TOC',
-      statusEmocional: 'Instável',
-      melhoraPercentual: 5,
-    },
-    {
-      id: '6',
-      nome: 'Fernanda Costa',
-      ultimaSessao: '03 Out, 15:45',
-      status: 'ativo',
-      idade: 29,
-      diagnosticoPrincipal: 'F43.1 - Transtorno de Estresse Pós-Traumático',
-      condicao: 'TEPT',
-      statusEmocional: 'Estável',
-      melhoraPercentual: 18,
-    },
-    {
-      id: '7',
-      nome: 'Gustavo Lima',
-      ultimaSessao: '30 Set, 09:30',
-      status: 'recente',
-      idade: 24,
-      diagnosticoPrincipal: 'F31.2 - Transtorno Bipolar',
-      condicao: 'Bipolar',
-      statusEmocional: 'Instável',
-      melhoraPercentual: 10,
-    },
-  ]);
+  const mockData = [
+    { id: '1', nome: 'Ana Clara Silva', ultimaSessao: 'Ontem, 14:00', status: 'ativo', idade: 32, diagnosticoPrincipal: 'F41.1 - Transtorno de Ansiedade Generalizada (TAG)', condicao: 'Anorexia', statusEmocional: 'Estável', melhoraPercentual: 15 },
+    { id: '2', nome: 'Marcos Oliveira', ultimaSessao: '12 Out, 10:30', status: 'ativo', idade: 45, diagnosticoPrincipal: 'F32.2 - Transtorno Depressivo Maior', condicao: 'Depressão', statusEmocional: 'Instável', melhoraPercentual: 8 },
+    { id: '3', nome: 'Beatriz Santos', ultimaSessao: '10 Out, 16:15', status: 'inativo', idade: 28, diagnosticoPrincipal: 'F40.1 - Fobia Social', condicao: 'Fobia Social', statusEmocional: 'Estável', melhoraPercentual: 22 },
+    { id: '4', nome: 'Ricardo Pereira', ultimaSessao: '08 Out, 09:00', status: 'ativo', idade: 51, diagnosticoPrincipal: 'F41.0 - Transtorno de Pânico', condicao: 'Pânico', statusEmocional: 'Estável', melhoraPercentual: 12 },
+    { id: '5', nome: 'Juliana Farias', ultimaSessao: '05 Out, 11:30', status: 'inativo', idade: 37, diagnosticoPrincipal: 'F42.0 - Transtorno Obsessivo-Compulsivo', condicao: 'TOC', statusEmocional: 'Instável', melhoraPercentual: 5 },
+    { id: '6', nome: 'Fernanda Costa', ultimaSessao: '03 Out, 15:45', status: 'ativo', idade: 29, diagnosticoPrincipal: 'F43.1 - Transtorno de Estresse Pós-Traumático', condicao: 'TEPT', statusEmocional: 'Estável', melhoraPercentual: 18 },
+    { id: '7', nome: 'Gustavo Lima', ultimaSessao: '30 Set, 09:30', status: 'recente', idade: 24, diagnosticoPrincipal: 'F31.2 - Transtorno Bipolar', condicao: 'Bipolar', statusEmocional: 'Instável', melhoraPercentual: 10 },
+  ];
+
+  useEffect(() => {
+    carregarPacientes();
+  }, []);
+
+  const carregarPacientes = async () => {
+    if (USAR_MOCK) {
+      setPacientesData(mockData);
+      return;
+    }
+
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const token = await AsyncStorage.getItem('token');
+
+      const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const formatados = (data.patients || []).map(p => ({
+          id: p.patientId || p.id,
+          nome: p.name,
+          ultimaSessao: p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : 'Sem sessão',
+          status: p.isActive ? 'ativo' : 'inativo',
+          idade: calcularIdade(p.birthDate),
+          diagnosticoPrincipal: p.diagnostico || 'Aguardando diagnóstico',
+          condicao: 'Em acompanhamento',
+          statusEmocional: 'Estável',
+          melhoraPercentual: 0,
+        }));
+        setPacientesData(formatados);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar pacientes:', err);
+    }
+  };
 
   const totalPacientes = pacientesData.length;
   const novosPacientes = pacientesData.filter(p => p.status === 'recente').length;
@@ -114,49 +105,54 @@ const Pacientes = ({ navigation }) => {
   const formatTelefone = (text) => {
     let cleaned = text.replace(/\D/g, '');
     if (cleaned.length <= 11) {
-      if (cleaned.length <= 2) {
-        return `(${cleaned}`;
-      } else if (cleaned.length <= 6) {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-      } else if (cleaned.length <= 10) {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-      } else {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
-      }
+      if (cleaned.length <= 2) return `(${cleaned}`;
+      else if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+      else if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+      else return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
     }
     return text;
   };
 
   const getFilteredPacientes = () => {
     let filtered = pacientesData;
-    
     if (searchText) {
-      filtered = filtered.filter(paciente =>
-        paciente.nome.toLowerCase().includes(searchText.toLowerCase())
-      );
+      filtered = filtered.filter(p => p.nome.toLowerCase().includes(searchText.toLowerCase()));
     }
-    
-    if (activeFilter === 'ativos') {
-      filtered = filtered.filter(paciente => paciente.status === 'ativo');
-    } else if (activeFilter === 'recentes') {
-      filtered = filtered.filter(paciente => paciente.status === 'recente');
-    }
-    
+    if (activeFilter === 'ativos') filtered = filtered.filter(p => p.status === 'ativo');
+    else if (activeFilter === 'recentes') filtered = filtered.filter(p => p.status === 'recente');
     return filtered;
   };
 
-  // ========== FUNÇÃO PARA NAVEGAR AO PERFIL DO PACIENTE ==========
   const handlePacientePress = (paciente) => {
-    console.log('Abrindo perfil do paciente:', paciente.nome);
-    // Navega para a tela de perfil passando os dados do paciente
     navigation.navigate('DashboardPaciente', { paciente });
   };
 
-  const handleEnviarConvite = () => {
-    Alert.alert('Convite enviado', `Um e-mail de convite foi enviado para ${email}`);
+  const handleEnviarConvite = async (patientId) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/patients/${patientId}/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Erro ao enviar convite');
+        return;
+      }
+
+      Alert.alert('Convite enviado!', 'O paciente receberá um e-mail com as credenciais de acesso.');
+
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível enviar o convite');
+    }
   };
 
-  const handleSalvarPaciente = () => {
+  const handleSalvarPaciente = async () => {
     if (!nomeCompleto) {
       Alert.alert('Erro', 'Por favor, preencha o nome completo');
       return;
@@ -172,37 +168,83 @@ const Pacientes = ({ navigation }) => {
     }
 
     setLoading(true);
-    
-    setTimeout(() => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const token = await AsyncStorage.getItem('token');
+
+      const formatDate = (date) => {
+        if (!date) return null;
+        const [day, month, year] = date.split('/');
+        return `${year}-${month}-${day}`;
+      };
+
+      const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: nomeCompleto,
+          email,
+          phone: telefone.replace(/\D/g, ''),
+          birthDate: formatDate(dataNascimento),
+          diagnostico,
+          resumoClinico,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Erro ao cadastrar paciente');
+        return;
+      }
+
       const novoPaciente = {
-        id: String(pacientesData.length + 1),
+        id: data.patient?.id || String(pacientesData.length + 1),
         nome: nomeCompleto,
         ultimaSessao: 'Primeira sessão',
         status: 'recente',
-        idade: 0,
+        idade: calcularIdade(formatDate(dataNascimento)),
         diagnosticoPrincipal: diagnostico || 'Aguardando diagnóstico',
         condicao: 'Em avaliação',
         statusEmocional: 'Estável',
         melhoraPercentual: 0,
       };
-      
-      setPacientesData([novoPaciente, ...pacientesData]);
-      
+
+      setPacientesData(prev => [novoPaciente, ...prev]);
+
+      const patientId = data.patient?.id;
+
       setNomeCompleto('');
       setEmail('');
       setTelefone('');
+      setDataNascimento('');
       setDiagnostico('');
       setResumoClinico('');
-      
-      setLoading(false);
       setModalVisible(false);
-      
-      Alert.alert('Sucesso', 'Paciente cadastrado com sucesso!');
-    }, 1500);
+
+      Alert.alert(
+        'Paciente cadastrado!',
+        'Deseja enviar um convite por e-mail para o paciente acessar o app?',
+        [
+          { text: 'Agora não', style: 'cancel' },
+          { text: 'Enviar convite', onPress: () => handleEnviarConvite(patientId) }
+        ]
+      );
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderPacienteCard = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.pacienteCard}
       onPress={() => handlePacientePress(item)}
       activeOpacity={0.7}
@@ -214,23 +256,17 @@ const Pacientes = ({ navigation }) => {
           </Text>
         </View>
       </View>
-      
       <View style={styles.pacienteInfo}>
         <Text style={styles.pacienteNome}>{item.nome}</Text>
         <View style={styles.sessaoContainer}>
           <Icon name="calendar" size={14} color="#9CA3AF" />
-          <Text style={styles.pacienteUltimaSessao}>
-            Última sessão: {item.ultimaSessao}
-          </Text>
+          <Text style={styles.pacienteUltimaSessao}>Última sessão: {item.ultimaSessao}</Text>
         </View>
         <View style={styles.diagnosticoContainer}>
           <Icon name="file-text" size={12} color="#9CA3AF" />
-          <Text style={styles.pacienteDiagnostico} numberOfLines={1}>
-            {item.diagnosticoPrincipal}
-          </Text>
+          <Text style={styles.pacienteDiagnostico} numberOfLines={1}>{item.diagnosticoPrincipal}</Text>
         </View>
       </View>
-      
       <Icon name="chevron-right" size={20} color="#D1D5DB" />
     </TouchableOpacity>
   );
@@ -240,7 +276,7 @@ const Pacientes = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      
+
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Pacientes</Text>
@@ -273,24 +309,13 @@ const Pacientes = ({ navigation }) => {
         </View>
 
         <View style={styles.filtersContainer}>
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'todos' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('todos')}
-          >
+          <TouchableOpacity style={[styles.filterButton, activeFilter === 'todos' && styles.filterButtonActive]} onPress={() => setActiveFilter('todos')}>
             <Text style={[styles.filterText, activeFilter === 'todos' && styles.filterTextActive]}>Todos</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'ativos' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('ativos')}
-          >
+          <TouchableOpacity style={[styles.filterButton, activeFilter === 'ativos' && styles.filterButtonActive]} onPress={() => setActiveFilter('ativos')}>
             <Text style={[styles.filterText, activeFilter === 'ativos' && styles.filterTextActive]}>Ativos</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'recentes' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('recentes')}
-          >
+          <TouchableOpacity style={[styles.filterButton, activeFilter === 'recentes' && styles.filterButtonActive]} onPress={() => setActiveFilter('recentes')}>
             <Text style={[styles.filterText, activeFilter === 'recentes' && styles.filterTextActive]}>Recentes</Text>
           </TouchableOpacity>
         </View>
@@ -309,12 +334,10 @@ const Pacientes = ({ navigation }) => {
           <Icon name="home" size={24} color="#9CA3AF" />
           <Text style={styles.navText}>Início</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
           <Icon name="users" size={24} color="#6366F1" />
           <Text style={[styles.navText, styles.navTextActive]}>Pacientes</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Relatorios')}>
           <Icon name="bar-chart-2" size={24} color="#9CA3AF" />
           <Text style={styles.navText}>Relatórios</Text>
@@ -325,7 +348,6 @@ const Pacientes = ({ navigation }) => {
         <Icon name="user-plus" size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* MODAL de cadastro */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -337,7 +359,6 @@ const Pacientes = ({ navigation }) => {
             </View>
             <ScrollView style={styles.modalContent}>
               <Text style={styles.sectionTitle}>Informações básicas</Text>
-              
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Nome Completo *</Text>
                 <View style={styles.inputWrapper}>
@@ -345,7 +366,6 @@ const Pacientes = ({ navigation }) => {
                   <TextInput style={styles.input} placeholder="Digite o nome completo" value={nomeCompleto} onChangeText={setNomeCompleto} />
                 </View>
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>E-mail *</Text>
                 <View style={styles.inputWrapper}>
@@ -353,7 +373,6 @@ const Pacientes = ({ navigation }) => {
                   <TextInput style={styles.input} placeholder="exemplo@email.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
                 </View>
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Telefone</Text>
                 <View style={styles.inputWrapper}>
@@ -361,9 +380,7 @@ const Pacientes = ({ navigation }) => {
                   <TextInput style={styles.input} placeholder="(00) 00000-0000" value={telefone} onChangeText={(text) => setTelefone(formatTelefone(text))} keyboardType="phone-pad" />
                 </View>
               </View>
-
               <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Informações clínicas</Text>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Diagnóstico Principal</Text>
                 <View style={styles.inputWrapper}>
@@ -371,7 +388,6 @@ const Pacientes = ({ navigation }) => {
                   <TextInput style={styles.input} placeholder="Digite o diagnóstico" value={diagnostico} onChangeText={setDiagnostico} />
                 </View>
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Resumo Clínico</Text>
                 <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
@@ -379,12 +395,6 @@ const Pacientes = ({ navigation }) => {
                   <TextInput style={[styles.input, styles.textArea]} placeholder="Descreva brevemente o histórico..." value={resumoClinico} onChangeText={setResumoClinico} multiline numberOfLines={3} textAlignVertical="top" />
                 </View>
               </View>
-
-              <TouchableOpacity style={styles.conviteButton} onPress={handleEnviarConvite}>
-                <Icon name="mail" size={18} color="#6366F1" />
-                <Text style={styles.conviteButtonText}>Enviar convite por e-mail</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity style={styles.cadastrarButton} onPress={handleSalvarPaciente} disabled={loading}>
                 {loading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.cadastrarButtonText}>Cadastrar Paciente</Text>}
               </TouchableOpacity>

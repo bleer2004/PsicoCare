@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../services/api';
 import {
   View,
   Text,
@@ -51,29 +53,64 @@ const CadastroPaciente = ({ navigation }) => {
     }
   };
 
-  const handleSalvar = () => {
-    if (!nome || !sobrenome || !email) {
-      Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios');
+ const handleSalvar = async () => {
+  if (!nome || !sobrenome || !email) {
+    Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    Alert.alert('Erro', 'Digite um e-mail válido');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const userStr = await AsyncStorage.getItem('user');
+    const user = JSON.parse(userStr);
+    const token = await AsyncStorage.getItem('token');
+
+    const formatDate = (date) => {
+      if (!date) return null;
+      const [day, month, year] = date.split('/');
+      return `${year}-${month}-${day}`;
+    };
+
+    const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name: `${nome} ${sobrenome}`,
+        email,
+        phone: telefone.replace(/\D/g, ''),
+        birthDate: formatDate(dataNascimento),
+        diagnostico,
+        observacoes,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert('Erro', data.error || 'Erro ao cadastrar paciente');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Erro', 'Digite um e-mail válido');
-      return;
-    }
+    Alert.alert('Sucesso', 'Paciente cadastrado com sucesso!', [
+      { text: 'OK', onPress: () => navigation.goBack() }
+    ]);
 
-    setLoading(true);
-    
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert(
-        'Sucesso',
-        'Paciente cadastrado com sucesso!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }, 1500);
-  };
+  } catch (err) {
+    console.error(err);
+    Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -233,15 +270,30 @@ const CadastroPaciente = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {showDatePicker && (
-        <DateTimePicker
-          value={new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
-      )}
+        {showDatePicker && (
+      <Modal transparent animationType="slide">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Text style={{ color: '#6B7280', fontSize: 16 }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Text style={{ color: '#6366F1', fontSize: 16, fontWeight: '600' }}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={dataNascimento ? new Date(dataNascimento.split('/').reverse().join('-')) : new Date()}
+              mode="date"
+              display="spinner"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+              locale="pt-BR"
+            />
+          </View>
+        </View>
+      </Modal>
+    )}
     </SafeAreaView>
   );
 };

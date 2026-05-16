@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../services/api';
 import {
   View,
@@ -65,29 +66,24 @@ const DashboardPaciente = ({ navigation, route }) => {
   });
 
   // Lista de Metas
-  const [metasList, setMetasList] = useState([
-    {
-      id: '1',
-      titulo: 'Reduzir episódios de pânico',
-      progresso: 'Frequência caiu 40% este mês',
-      status: 'concluido',
-      prazo: '30/04/2024',
-    },
-    {
-      id: '2',
-      titulo: 'Exercício 3x por semana',
-      progresso: 'Em andamento - 1/3 concluído',
-      status: 'andamento',
-      prazo: '15/05/2024',
-    },
-    {
-      id: '3',
-      titulo: 'Higiene do sono (Desligar telas)',
-      progresso: 'Novo objetivo estabelecido',
-      status: 'novo',
-      prazo: '01/06/2024',
-    },
-  ]);
+ const [metasList, setMetasList] = useState([]);
+
+  useEffect(() => {
+    carregarMetas();
+  }, []);
+
+  const carregarMetas = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/patients/${paciente.id}/goals`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) setMetasList(data.goals || []);
+    } catch (err) {
+      console.error('Erro ao carregar metas:', err);
+    }
+  };
 
   // Lista de Insights
   const [insightsList, setInsightsList] = useState([
@@ -194,47 +190,80 @@ const DashboardPaciente = ({ navigation, route }) => {
   ];
 
   // ========== FUNÇÕES DAS METAS ==========
-  const handleAdicionarMeta = () => {
-    if (!novaMeta.trim()) {
-      Alert.alert('Erro', 'Digite uma meta válida');
+const handleAdicionarMeta = async () => {
+  if (!novaMeta.trim()) {
+    Alert.alert('Erro', 'Digite uma meta válida');
+    return;
+  }
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const response = await fetch(`${API_URL}/patients/${paciente.id}/goals`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        titulo: novaMeta,
+        prazo: novaMetaPrazo || 'Sem prazo definido',
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      Alert.alert('Erro', data.error || 'Erro ao adicionar meta');
       return;
     }
-    
-    const novaMetaObj = {
-      id: String(Date.now()),
-      titulo: novaMeta,
-      progresso: 'Em andamento',
-      status: 'novo',
-      prazo: novaMetaPrazo || 'Sem prazo definido',
-    };
-    
-    setMetasList([novaMetaObj, ...metasList]);
+
+    await carregarMetas();
     setNovaMeta('');
     setNovaMetaPrazo('');
     setModalMetasVisible(false);
     Alert.alert('Sucesso', 'Meta adicionada com sucesso!');
-  };
+  } catch (err) {
+    Alert.alert('Erro', 'Não foi possível adicionar a meta');
+  }
+};
 
-  const handleAtualizarStatusMeta = (id, novoStatus) => {
-    setMetasList(metasList.map(meta => 
-      meta.id === id ? { ...meta, status: novoStatus } : meta
-    ));
-    Alert.alert('Status atualizado', `Meta marcada como ${novoStatus}`);
-  };
+const handleAtualizarStatusMeta = async (id, novoStatus) => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    await fetch(`${API_URL}/patients/${paciente.id}/goals/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ status: novoStatus, progresso: novoStatus === 'concluido' ? 'Concluído!' : 'Em andamento' })
+    });
+    await carregarMetas();
+  } catch (err) {
+    Alert.alert('Erro', 'Não foi possível atualizar a meta');
+  }
+};
 
-  const handleRemoverMeta = (id) => {
-    Alert.alert(
-      'Remover meta',
-      'Tem certeza que deseja remover esta meta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Remover', style: 'destructive', onPress: () => {
-          setMetasList(metasList.filter(meta => meta.id !== id));
-          Alert.alert('Removida', 'Meta removida com sucesso');
-        }}
-      ]
-    );
-  };
+const handleRemoverMeta = (id) => {
+  Alert.alert(
+    'Remover meta',
+    'Tem certeza que deseja remover esta meta?',
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        try {
+          const token = await AsyncStorage.getItem('token');
+          await fetch(`${API_URL}/patients/${paciente.id}/goals/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          await carregarMetas();
+        } catch (err) {
+          Alert.alert('Erro', 'Não foi possível remover a meta');
+        }
+      }}
+    ]
+  );
+};
 
   // ========== FUNÇÕES DOS INSIGHTS ==========
   const handleAdicionarInsight = () => {
@@ -1041,6 +1070,7 @@ const DashboardPaciente = ({ navigation, route }) => {
     </SafeAreaView>
   );
 };
+
 
 // ========== ESTILOS ==========
 const styles = StyleSheet.create({

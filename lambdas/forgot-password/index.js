@@ -1,13 +1,17 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 const dynamoClient = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(dynamoClient);
 const sesClient = new SESClient({ region: "sa-east-1" });
-
 const TABLE_NAME = "PsicoCare";
-const SENDER_EMAIL = "psicocare.noreply@gmail.com"; 
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export const handler = async (event) => {
   try {
@@ -28,35 +32,39 @@ export const handler = async (event) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const ttl = Math.floor(Date.now() / 1000) + 3600;
 
-    // Salva o Token com informações extras para facilitar o reset depois
     await dynamo.send(new PutCommand({
       TableName: TABLE_NAME,
       Item: {
         PK: `TOKEN#${code}`,
         SK: "RESET",
         userId: user.PK.split("#")[1],
-        userType: user.PK.split("#")[0], // CLINICIAN ou PATIENT
+        userType: user.PK.split("#")[0],
         email,
         ttl,
         used: false
       }
     }));
 
-    // Envio via SES
-    const sesParams = {
-      Source: SENDER_EMAIL,
+    const dataSolicitacao = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+    let htmlTemplate = readFileSync(join(__dirname, 'recuperarSenha.html'), 'utf-8');
+    htmlTemplate = htmlTemplate
+      .replace(/\{\{email\}\}/g, email)
+      .replace(/\{\{codigo\}\}/g, code)
+      .replace(/\{\{data_solicitacao\}\}/g, dataSolicitacao)
+      .replace(/\{\{ip\}\}/g, 'Não disponível')
+      .replace(/\{\{validade\}\}/g, '60')
+      .replace(/\{\{link_redefinir\}\}/g, '#')
+      .replace(/\{\{link_login\}\}/g, '#');
+
+    await sesClient.send(new SendEmailCommand({
+      Source: process.env.SENDER_EMAIL,
       Destination: { ToAddresses: [email] },
       Message: {
         Subject: { Data: "Código de Verificação - PsicoCare" },
-        Body: {
-          Html: {
-            Data: `<h1>Seu código é ${code}</h1><p>Válido por 1 hora.</p>`
-          }
-        }
+        Body: { Html: { Data: htmlTemplate } }
       }
-    };
-
-    await sesClient.send(new SendEmailCommand(sesParams));
+    }));
 
     return response(200, { message: "Código enviado!" });
   } catch (err) {

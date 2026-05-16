@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../services/api';
 import {
   View,
   Text,
@@ -35,14 +37,33 @@ const Relatorios = ({ navigation }) => {
   const [showPacienteDropdown, setShowPacienteDropdown] = useState(false);
   
   // Lista de pacientes (mock)
-  const pacientesList = [
-    { id: '1', nome: 'Ana Clara Silva' },
-    { id: '2', nome: 'Marcos Oliveira' },
-    { id: '3', nome: 'Beatriz Santos' },
-    { id: '4', nome: 'Ricardo Pereira' },
-    { id: '5', nome: 'Juliana Farias' },
-  ];
-  
+  const [pacientesList, setPacientesList] = useState([]);
+
+  useEffect(() => {
+    carregarPacientes();
+  }, []);
+
+  const carregarPacientes = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const token = await AsyncStorage.getItem('token');
+
+      const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPacientesList((data.patients || []).map(p => ({
+          id: p.patientId || p.id,
+          nome: p.name,
+        })));
+      }
+    } catch (err) {
+      console.error('Erro ao carregar pacientes:', err);
+    }
+  };
+
   // Dados mockados de relatórios
   const [relatorios, setRelatorios] = useState([
     {

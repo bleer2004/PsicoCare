@@ -2,6 +2,7 @@
   "name": "psicocare",
   "main": "expo/AppEntry",
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.1045.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^8.4.4",
@@ -10,7 +11,6 @@
     "@react-navigation/stack": "^6.4.1",
     "expo": "~54.0.17",
     "expo-status-bar": "~3.0.9",
-    "nodemailer": "^8.0.7",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-chart-kit": "^6.12.0",

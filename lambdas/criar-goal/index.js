@@ -10,10 +10,10 @@ export const handler = async (event) => {
   try {
     const patientId = event.pathParameters?.patientId;
     const body = JSON.parse(event.body);
-    const { title, category, xpReward } = body;
+    const { titulo, prazo } = body;
 
-    if (!patientId || !title || !category) {
-      return response(400, { error: "Campos obrigatórios: title, category" });
+    if (!patientId || !titulo) {
+      return response(400, { error: "Campos obrigatórios: titulo" });
     }
 
     const id = uuidv4();
@@ -24,16 +24,10 @@ export const handler = async (event) => {
       SK: `GOAL#${id}`,
       type: "GOAL",
       createdAt: now,
-      data: {
-        title,
-        category,
-        status: "active",
-        progress: 0,
-        streakDays: 0,
-        xpReward: xpReward || 20,
-        createdBy: "clinician",
-        completedAt: null
-      }
+      titulo,
+      prazo: prazo || 'Sem prazo definido',
+      progresso: 'Em andamento',
+      status: 'novo',
     };
 
     await dynamo.send(new PutCommand({
@@ -41,7 +35,7 @@ export const handler = async (event) => {
       Item: item
     }));
 
-    return response(201, { id, title, category, status: "active", createdAt: now });
+    return response(201, { id, titulo, status: 'novo', createdAt: now });
 
   } catch (err) {
     console.error(err);

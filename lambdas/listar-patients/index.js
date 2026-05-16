@@ -22,16 +22,15 @@ export const handler = async (event) => {
       }
     }));
 
-    const patients = result.Items.map(item => ({
-      id: item.SK.split("#")[1],
-      name: item.data.name,
-      email: item.data.email,
-      phone: item.data.phone,
-      birthDate: item.data.birthDate,
-      isActive: item.data.isActive,
-      xpPoints: item.data.xpPoints,
-      level: item.data.level,
-      streakDays: item.data.streakDays,
+   const patients = result.Items.map(item => ({
+      id: item.patientId || item.SK.split("#")[1],
+      name: item.name,
+      email: item.email,
+      phone: item.phone || null,
+      birthDate: item.birthDate || null,
+      isActive: item.isActive,
+      diagnostico: item.diagnostico || null,
+      observacoes: item.observacoes || null,
       createdAt: item.createdAt
     }));
 
