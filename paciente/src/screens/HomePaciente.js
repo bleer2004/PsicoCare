@@ -1,16 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../../src/services/api';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  Image,
-  Alert,
-  Modal,
-  FlatList,
+  View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar,
+  ScrollView, Image, Alert, Modal, FlatList, ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { LineChart } from 'react-native-chart-kit';
@@ -20,121 +13,106 @@ const HomePaciente = ({ navigation }) => {
   const screenWidth = Dimensions.get('window').width;
   const [selectedMood, setSelectedMood] = useState(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [loadingMood, setLoadingMood] = useState(false);
+  const [paciente, setPaciente] = useState(null);
+  const [moodHistory, setMoodHistory] = useState([]);
 
   const moods = [
-    { id: 'feliz', label: 'Feliz', color: '#E3F2FD', iconColor: '#2563EB', icon: 'smile' },
-    { id: 'calmo', label: 'Calmo', color: '#E0F2F1', iconColor: '#0D9488', icon: 'wind' },
-    { id: 'ansioso', label: 'Ansioso', color: '#F3E5F5', iconColor: '#9333EA', icon: 'zap' },
-    { id: 'triste', label: 'Triste', color: '#FCE4EC', iconColor: '#DB2777', icon: 'frown' },
-    { id: 'neutral', label: 'Neutral', color: '#F1F5F9', iconColor: '#64748B', icon: 'meh' },
+    { id: 'feliz', label: 'Feliz', color: '#E3F2FD', iconColor: '#2563EB', icon: 'smile', valence: 8, arousal: 7 },
+    { id: 'calmo', label: 'Calmo', color: '#E0F2F1', iconColor: '#0D9488', icon: 'wind', valence: 7, arousal: 3 },
+    { id: 'ansioso', label: 'Ansioso', color: '#F3E5F5', iconColor: '#9333EA', icon: 'zap', valence: 3, arousal: 8 },
+    { id: 'triste', label: 'Triste', color: '#FCE4EC', iconColor: '#DB2777', icon: 'frown', valence: 2, arousal: 2 },
+    { id: 'neutral', label: 'Neutral', color: '#F1F5F9', iconColor: '#64748B', icon: 'meh', valence: 5, arousal: 5 },
   ];
 
-  const metas = [
-    { id: '1', titulo: '10 min de meditação', concluido: true },
-    { id: '2', titulo: '2L de água', concluido: true },
-    { id: '3', titulo: 'Caminhada de 30 minutos', concluido: false },
-  ];
-
-  // Dados de exemplo para notificações
   const [notificacoes, setNotificacoes] = useState([
-    {
-      id: '1',
-      titulo: 'Nova mensagem do psicólogo',
-      mensagem: 'Dr. Robinson enviou uma nova mensagem para você',
-      data: 'Hoje, 10:30',
-      lida: false,
-      icon: 'message-circle',
-    },
-    {
-      id: '2',
-      titulo: 'Meta concluída!',
-      mensagem: 'Parabéns! Você concluiu a meta "10 min de meditação"',
-      data: 'Ontem, 18:45',
-      lida: false,
-      icon: 'check-circle',
-    },
-    {
-      id: '3',
-      titulo: 'Lembrete: Atividade diária',
-      mensagem: 'Não se esqueça de registrar seu humor hoje',
-      data: 'Ontem, 09:00',
-      lida: true,
-      icon: 'bell',
-    },
-    {
-      id: '4',
-      titulo: 'Relatório semanal disponível',
-      mensagem: 'Seu relatório de progresso da semana está pronto',
-      data: '15/05/2024',
-      lida: true,
-      icon: 'bar-chart-2',
-    },
+    { id: '1', titulo: 'Bem-vindo ao PsicoCare!', mensagem: 'Registre seu humor diariamente para acompanhar seu progresso.', data: 'Hoje', lida: false, icon: 'heart' },
   ]);
 
-  const dadosGrafico = {
-    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  const carregarDados = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setPaciente(user);
+        await carregarMoods(user.id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const carregarMoods = async (patientId) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/patients/${patientId}/moods?limit=7`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) setMoodHistory(data.moods || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleMoodPress = async (mood) => {
+    setSelectedMood(mood.id);
+    setLoadingMood(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+
+      const response = await fetch(`${API_URL}/patients/${user.id}/moods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          valenceScore: mood.valence,
+          arousalScore: mood.arousal,
+          contextTags: [mood.id],
+        })
+      });
+
+      if (response.ok) {
+        Alert.alert('Humor registrado!', `Você está se sentindo ${mood.label} hoje.`);
+        await carregarMoods(user.id);
+      }
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível registrar o humor');
+    } finally {
+      setLoadingMood(false);
+    }
+  };
+
+  const chartData = {
+    labels: moodHistory.length > 0
+      ? moodHistory.slice(0, 7).reverse().map((_, i) => ['D', 'T', 'Q', 'Q', 'S', 'S', 'D'][i])
+      : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
     datasets: [{
-      data: [42, 74, 53, 95, 68, 47, 21],
+      data: moodHistory.length > 0
+        ? moodHistory.slice(0, 7).reverse().map(m => m.emotionalScore || 50)
+        : [42, 74, 53, 95, 68, 47, 21],
       color: (opacity = 1) => `rgba(179, 103, 212, ${opacity})`,
     }],
   };
 
-  const handleMoodPress = (mood) => {
-    setSelectedMood(mood.id);
-    Alert.alert('Humor registrado', `Você está se sentindo ${mood.label}!`);
-  };
-
-  const handleEmergencyCall = () => {
-    Alert.alert(
-      'Ligar para emergência',
-      'Tem certeza que deseja ligar para o serviço de emergência?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Ligar', onPress: () => Alert.alert('Chamada', 'Ligando para emergência...') }
-      ]
-    );
-  };
-
-  const handleNotificationPress = () => {
-    setNotificationsVisible(true);
-  };
-
-  const handleMarkAsRead = (id) => {
-    setNotificacoes(notificacoes.map(notif => 
-      notif.id === id ? { ...notif, lida: true } : notif
-    ));
-  };
-
-  const handleClearNotifications = () => {
-    Alert.alert(
-      'Limpar notificações',
-      'Deseja limpar todas as notificações?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Limpar', onPress: () => setNotificacoes([]) }
-      ]
-    );
-  };
-
   const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
-
-  const calcularProgresso = () => {
-    const concluidas = metas.filter(m => m.concluido).length;
-    return Math.round((concluidas / metas.length) * 100);
-  };
+  const primeiroNome = paciente?.name?.split(' ')[0] || 'você';
 
   const renderNotificacaoItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.notificacaoItem, !item.lida && styles.notificacaoItemNaoLida]}
-      onPress={() => handleMarkAsRead(item.id)}
+      onPress={() => setNotificacoes(notificacoes.map(n => n.id === item.id ? { ...n, lida: true } : n))}
     >
       <View style={styles.notificacaoIcon}>
         <Icon name={item.icon} size={20} color={!item.lida ? '#B367D4' : '#94A3B8'} />
       </View>
       <View style={styles.notificacaoContent}>
-        <Text style={[styles.notificacaoTitulo, !item.lida && styles.notificacaoTituloNaoLida]}>
-          {item.titulo}
-        </Text>
+        <Text style={[styles.notificacaoTitulo, !item.lida && styles.notificacaoTituloNaoLida]}>{item.titulo}</Text>
         <Text style={styles.notificacaoMensagem}>{item.mensagem}</Text>
         <Text style={styles.notificacaoData}>{item.data}</Text>
       </View>
@@ -145,29 +123,20 @@ const HomePaciente = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header com Avatar e Notificações */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarBorder}>
               <View style={styles.avatar}>
-                <Image 
-                  source={{ uri: 'https://placehold.co/36x36' }} 
-                  style={styles.avatarImage}
-                />
+                <Icon name="user" size={20} color="#B367D4" />
               </View>
             </View>
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.greeting}>Olá, espero que esteja tendo um bom dia,</Text>
-            <Text style={styles.userName}>Sarah Mitchell</Text>
+            <Text style={styles.greeting}>Olá, espero que esteja bem,</Text>
+            <Text style={styles.userName}>{primeiroNome}</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationPress}>
+          <TouchableOpacity style={styles.notificationButton} onPress={() => setNotificationsVisible(true)}>
             <Icon name="bell" size={20} color="#475569" />
             {notificacoesNaoLidas > 0 && (
               <View style={styles.notificationBadge}>
@@ -177,18 +146,15 @@ const HomePaciente = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Como está se sentindo hoje? */}
         <View style={styles.moodSection}>
           <Text style={styles.sectionTitle}>Como está se sentindo hoje?</Text>
           <View style={styles.moodContainer}>
             {moods.map((mood) => (
               <TouchableOpacity
                 key={mood.id}
-                style={[
-                  styles.moodItem,
-                  selectedMood === mood.id && styles.moodItemSelected
-                ]}
+                style={[styles.moodItem, selectedMood === mood.id && styles.moodItemSelected]}
                 onPress={() => handleMoodPress(mood)}
+                disabled={loadingMood}
               >
                 <View style={[styles.moodIconWrapper, { backgroundColor: mood.color }]}>
                   <Icon name={mood.icon} size={24} color={mood.iconColor} />
@@ -199,43 +165,10 @@ const HomePaciente = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Botão Emergência */}
-        <TouchableOpacity style={styles.emergencyButton} onPress={handleEmergencyCall}>
+        <TouchableOpacity style={styles.emergencyButton} onPress={() => Alert.alert('Emergência', 'Em caso de emergência ligue 192 (SAMU) ou 188 (CVV)')}>
           <Text style={styles.emergencyButtonText}>Ligar para emergência</Text>
         </TouchableOpacity>
 
-        {/* Ideia diária */}
-        <View style={styles.ideaSection}>
-          <Text style={styles.sectionTitle}>Ideia diária</Text>
-          <View style={styles.ideaCard}>
-            <View style={styles.ideaBlur} />
-            <View style={styles.ideaContent}>
-              <View style={styles.ideaHeader}>
-                <View style={styles.ideaAvatarContainer}>
-                  <View style={styles.ideaAvatarBorder}>
-                    <Image 
-                      source={{ uri: 'https://placehold.co/44x44' }} 
-                      style={styles.ideaAvatar}
-                    />
-                  </View>
-                </View>
-                <View style={styles.ideaTextContainer}>
-                  <Text style={styles.ideaDoctorName}>Dr. Robinson Abraham</Text>
-                  <Text style={styles.ideaQuote}>
-                    “Pense de forma calma com a mente limpa, tome água ”
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.ideaTimeContainer}>
-                <View style={styles.ideaTimeBadge}>
-                  <Text style={styles.ideaTimeText}>Hoje, 10:00</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Anotações diárias */}
         <TouchableOpacity style={styles.notesCard} onPress={() => navigation.navigate('DiarioPaciente')}>
           <View style={styles.notesIconWrapper}>
             <Icon name="edit-2" size={18} color="#B367D4" />
@@ -247,38 +180,20 @@ const HomePaciente = ({ navigation }) => {
           <Icon name="chevron-right" size={16} color="#CBD5E1" />
         </TouchableOpacity>
 
-        {/* Progresso de metas */}
         <TouchableOpacity style={styles.goalsCard} onPress={() => navigation.navigate('MetasPaciente')}>
           <View style={styles.goalsHeader}>
-            <Text style={styles.goalsTitle}>Progresso de metas</Text>
-            <Text style={styles.goalsPercentage}>{calcularProgresso()}%</Text>
+            <Text style={styles.goalsTitle}>Minhas metas</Text>
+            <Icon name="target" size={20} color="#B367D4" />
           </View>
-          
-          <View style={styles.goalsList}>
-            {metas.map((meta) => (
-              <View key={meta.id} style={styles.goalItem}>
-                <View style={[styles.goalCheckbox, meta.concluido && styles.goalCheckboxActive]}>
-                  {meta.concluido && <Icon name="check" size={10} color="#FFFFFF" />}
-                </View>
-                <Text style={[styles.goalText, meta.concluido && styles.goalTextCompleted]}>
-                  {meta.titulo}
-                </Text>
-              </View>
-            ))}
-          </View>
-          
-          <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBar, { width: `${calcularProgresso()}%` }]} />
-          </View>
+          <Text style={styles.goalsSubtitle}>Veja as metas definidas pelo seu psicólogo</Text>
         </TouchableOpacity>
 
-        {/* Gráfico semanal */}
         <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Gráfico semanal</Text>
+          <Text style={styles.sectionTitle}>Histórico emocional</Text>
           <View style={styles.chartContainer}>
             <LineChart
-              data={dadosGrafico}
-              width={screenWidth - 48}
+              data={chartData}
+              width={screenWidth - 80}
               height={140}
               chartConfig={{
                 backgroundColor: '#FFFFFF',
@@ -292,76 +207,43 @@ const HomePaciente = ({ navigation }) => {
               }}
               bezier
               style={styles.chart}
-              formatYLabel={(value) => `${value}`}
             />
           </View>
         </View>
       </ScrollView>
 
-      {/* Modal de Notificações */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={notificationsVisible}
-        onRequestClose={() => setNotificationsVisible(false)}
-      >
+      <Modal animationType="slide" transparent={true} visible={notificationsVisible} onRequestClose={() => setNotificationsVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Notificações</Text>
-              <View style={styles.modalHeaderActions}>
-                {notificacoes.length > 0 && (
-                  <TouchableOpacity onPress={handleClearNotifications}>
-                    <Text style={styles.clearAllText}>Limpar tudo</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity onPress={() => setNotificationsVisible(false)}>
-                  <Icon name="x" size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={() => setNotificationsVisible(false)}>
+                <Icon name="x" size={24} color="#6B7280" />
+              </TouchableOpacity>
             </View>
-            
-            {notificacoes.length === 0 ? (
-              <View style={styles.emptyNotifications}>
-                <Icon name="bell-off" size={48} color="#D1D5DB" />
-                <Text style={styles.emptyNotificationsTitle}>Nenhuma notificação</Text>
-                <Text style={styles.emptyNotificationsText}>
-                  Você não tem notificações no momento
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={notificacoes}
-                keyExtractor={(item) => item.id}
-                renderItem={renderNotificacaoItem}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.notificacoesList}
-              />
-            )}
+            <FlatList
+              data={notificacoes}
+              keyExtractor={(item) => item.id}
+              renderItem={renderNotificacaoItem}
+              contentContainerStyle={styles.notificacoesList}
+            />
           </View>
         </View>
       </Modal>
 
-      {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
-        <TouchableOpacity 
-          style={[styles.navItem, styles.navItemActive]} 
-          onPress={() => navigation.navigate('HomePaciente')}
-        >
+        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
           <Icon name="home" size={20} color="#B367D4" />
           <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('DiarioPaciente')}>
           <Icon name="book-open" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Diário</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('MetasPaciente')}>
           <Icon name="target" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Metas</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PerfilPaciente')}>
           <Icon name="user" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Perfil</Text>

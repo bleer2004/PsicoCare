@@ -50,10 +50,6 @@ const Pacientes = ({ navigation }) => {
     { id: '1', nome: 'Ana Clara Silva', ultimaSessao: 'Ontem, 14:00', status: 'ativo', idade: 32, diagnosticoPrincipal: 'F41.1 - Transtorno de Ansiedade Generalizada (TAG)', condicao: 'Anorexia', statusEmocional: 'Estável', melhoraPercentual: 15 },
     { id: '2', nome: 'Marcos Oliveira', ultimaSessao: '12 Out, 10:30', status: 'ativo', idade: 45, diagnosticoPrincipal: 'F32.2 - Transtorno Depressivo Maior', condicao: 'Depressão', statusEmocional: 'Instável', melhoraPercentual: 8 },
     { id: '3', nome: 'Beatriz Santos', ultimaSessao: '10 Out, 16:15', status: 'inativo', idade: 28, diagnosticoPrincipal: 'F40.1 - Fobia Social', condicao: 'Fobia Social', statusEmocional: 'Estável', melhoraPercentual: 22 },
-    { id: '4', nome: 'Ricardo Pereira', ultimaSessao: '08 Out, 09:00', status: 'ativo', idade: 51, diagnosticoPrincipal: 'F41.0 - Transtorno de Pânico', condicao: 'Pânico', statusEmocional: 'Estável', melhoraPercentual: 12 },
-    { id: '5', nome: 'Juliana Farias', ultimaSessao: '05 Out, 11:30', status: 'inativo', idade: 37, diagnosticoPrincipal: 'F42.0 - Transtorno Obsessivo-Compulsivo', condicao: 'TOC', statusEmocional: 'Instável', melhoraPercentual: 5 },
-    { id: '6', nome: 'Fernanda Costa', ultimaSessao: '03 Out, 15:45', status: 'ativo', idade: 29, diagnosticoPrincipal: 'F43.1 - Transtorno de Estresse Pós-Traumático', condicao: 'TEPT', statusEmocional: 'Estável', melhoraPercentual: 18 },
-    { id: '7', nome: 'Gustavo Lima', ultimaSessao: '30 Set, 09:30', status: 'recente', idade: 24, diagnosticoPrincipal: 'F31.2 - Transtorno Bipolar', condicao: 'Bipolar', statusEmocional: 'Instável', melhoraPercentual: 10 },
   ];
 
   useEffect(() => {
@@ -128,28 +124,38 @@ const Pacientes = ({ navigation }) => {
   };
 
   const handleEnviarConvite = async (patientId) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_URL}/patients/${patientId}/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+    Alert.alert(
+      'Enviar convite',
+      'Deseja enviar um convite por e-mail para este paciente acessar o app?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Enviar', onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const response = await fetch(`${API_URL}/patients/${patientId}/invite`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                Alert.alert('Erro', data.error || 'Erro ao enviar convite');
+                return;
+              }
+
+              Alert.alert('Convite enviado!', 'O paciente receberá um e-mail com as credenciais de acesso.');
+            } catch (err) {
+              Alert.alert('Erro', 'Não foi possível enviar o convite');
+            }
+          }
         }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        Alert.alert('Erro', data.error || 'Erro ao enviar convite');
-        return;
-      }
-
-      Alert.alert('Convite enviado!', 'O paciente receberá um e-mail com as credenciais de acesso.');
-
-    } catch (err) {
-      Alert.alert('Erro', 'Não foi possível enviar o convite');
-    }
+      ]
+    );
   };
 
   const handleSalvarPaciente = async () => {
@@ -267,6 +273,13 @@ const Pacientes = ({ navigation }) => {
           <Text style={styles.pacienteDiagnostico} numberOfLines={1}>{item.diagnosticoPrincipal}</Text>
         </View>
       </View>
+      <TouchableOpacity
+        onPress={() => handleEnviarConvite(item.id)}
+        style={styles.conviteIconButton}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Icon name="mail" size={20} color="#6366F1" />
+      </TouchableOpacity>
       <Icon name="chevron-right" size={20} color="#D1D5DB" />
     </TouchableOpacity>
   );
@@ -344,9 +357,9 @@ const Pacientes = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.fabButton} onPress={() => setModalVisible(true)}>
-        <Icon name="user-plus" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+    <TouchableOpacity style={styles.fabButton} onPress={() => navigation.navigate('CadastroPaciente')}>
+      <Icon name="user-plus" size={24} color="#FFFFFF" />
+    </TouchableOpacity>
 
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>

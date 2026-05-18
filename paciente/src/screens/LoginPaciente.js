@@ -1,75 +1,57 @@
 import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../../src/services/api';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  SafeAreaView, StatusBar, KeyboardAvoidingView, Platform,
+  ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
 const LoginPaciente = ({ navigation }) => {
+  const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!senha) {
-      Alert.alert('Erro', 'Por favor, digite sua senha');
+  const handleLogin = async () => {
+    if (!email || !senha) {
+      Alert.alert('Erro', 'Por favor, preencha email e senha');
       return;
     }
-    
-    if (senha !== confirmarSenha) {
-      Alert.alert('Erro', 'As senhas não coincidem');
-      return;
-    }
-
-    if (senha.length < 6) {
-      Alert.alert('Erro', 'A senha deve ter no mínimo 6 caracteres');
-      return;
-    }
-
     setLoading(true);
-    
-    // Simular login
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_URL}/auth/patient/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: senha }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Email ou senha incorretos');
+        return;
+      }
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      navigation.replace('HomePaciente');
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
       setLoading(false);
-      Alert.alert('Sucesso', 'Login realizado com sucesso!');
-      navigation.navigate('HomePaciente');
-    }, 1500);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
-      
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Blur decorativo no fundo */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.decorativeBlur} />
-          
-          {/* Logo e Título */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <View style={styles.logoIconWrapper}>
                 <View style={styles.logoIcon}>
-                  {/* Ícone do cérebro */}
-                  <Icon name="brain" size={28} color="#B366D4" />
+                  <Icon name="heart" size={28} color="#B366D4" />
                 </View>
               </View>
             </View>
@@ -77,17 +59,29 @@ const LoginPaciente = ({ navigation }) => {
             <Text style={styles.appDescription}>Plataforma clínica de saúde mental.</Text>
           </View>
 
-          {/* Formulário de Login */}
           <View style={styles.formContainer}>
             <View style={styles.titleContainer}>
               <Text style={styles.loginTitle}>Login</Text>
-              <Text style={styles.loginSubtitle}>
-                Bem vindo (a) à nossa plataforma! Crie uma senha para começar a utilizar o sistema.
-              </Text>
+              <Text style={styles.loginSubtitle}>Bem vindo(a)! Acesse sua conta para continuar.</Text>
             </View>
 
             <View style={styles.form}>
-              {/* Campo Senha */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>E-mail</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="mail" size={18} color="#94A3B8" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="seu@email.com"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                </View>
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Senha</Text>
                 <View style={styles.inputWrapper}>
@@ -106,26 +100,6 @@ const LoginPaciente = ({ navigation }) => {
                 </View>
               </View>
 
-              {/* Campo Confirmar Senha */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Confirme sua senha</Text>
-                <View style={styles.inputWrapper}>
-                  <Icon name="lock" size={18} color="#94A3B8" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Digite sua senha"
-                    placeholderTextColor="#94A3B8"
-                    secureTextEntry={!showConfirmPassword}
-                    value={confirmarSenha}
-                    onChangeText={setConfirmarSenha}
-                  />
-                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                    <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color="#94A3B8" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Botão Entrar */}
               <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
                 {loading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
@@ -138,7 +112,6 @@ const LoginPaciente = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Footer Segurança */}
             <View style={styles.footer}>
               <View style={styles.securityBadge}>
                 <Icon name="shield" size={12} color="#10B981" />

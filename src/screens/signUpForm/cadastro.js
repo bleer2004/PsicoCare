@@ -34,6 +34,7 @@ const Cadastro = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [tempDate, setTempDate] = useState(new Date());
 
   const profissoes = [
     { id: '1', label: 'Psicólogo', value: 'psicologo', registroLabel: 'CRP' },
@@ -113,6 +114,12 @@ const Cadastro = ({ navigation }) => {
     setLoading(false);
   }
 };
+
+  const handleConfirmarData = () => {
+    const formattedDate = `${tempDate.getDate().toString().padStart(2, '0')}/${(tempDate.getMonth() + 1).toString().padStart(2, '0')}/${tempDate.getFullYear()}`;
+    setDataNascimento(formattedDate);
+    setShowDatePicker(false);
+  };
 
   const renderProfissaoModal = () => (
     <Modal
@@ -357,14 +364,30 @@ const Cadastro = ({ navigation }) => {
       {renderProfissaoModal()}
 
       {showDatePicker && (
-        <DateTimePicker
-          value={new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
-      )}
+      <Modal transparent animationType="slide">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+          <View style={{ backgroundColor: '#3A3A3C', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Text style={{ color: '#FFFF', fontSize: 16 }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleConfirmarData}>
+                <Text style={{ color: '#FFFF', fontSize: 16, fontWeight: '600' }}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={tempDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+              locale="pt-BR"
+              style={{ height: 380 }}
+            />
+          </View>
+        </View>
+      </Modal>
+    )}
     </SafeAreaView>
   );
 };

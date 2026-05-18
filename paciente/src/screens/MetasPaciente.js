@@ -1,230 +1,160 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../../src/services/api';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  Image,
-  Alert,
+  View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
+  StatusBar, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
 const MetasPaciente = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('emocional');
+  const [metasList, setMetasList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const metasAtivas = [
-    {
-      id: '1',
-      titulo: 'Reflexão matinal',
-      descricao: 'Reflita sobre seus sentimentos por 5 minutos',
-      categoria: 'Mental',
-      progresso: 5,
-      total: 7,
-      cor: '#B367D4',
-    },
-  ];
+  useEffect(() => {
+    carregarMetas();
+  }, []);
 
-  const metasConcluidas = [
-    {
-      id: '2',
-      titulo: 'Identifique gatilhos',
-      descricao: 'Marcado como concluído',
-      categoria: 'Completa',
-      cor: '#22C55E',
-    },
-  ];
-
-  const stats = {
-    completas: 12,
-    ativas: 4,
-    aumento: '+3 this week',
+  const carregarMetas = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const response = await fetch(`${API_URL}/patients/${user.id}/goals`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) setMetasList(data.goals || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const progressoGeral = 75;
+  const getStatusColor = (status) => {
+    if (status === 'concluido') return '#22C55E';
+    if (status === 'andamento') return '#F59E0B';
+    return '#B367D4';
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === 'concluido') return 'Concluído';
+    if (status === 'andamento') return 'Em andamento';
+    return 'Nova';
+  };
+
+  const metasAtivas = metasList.filter(m => m.status !== 'concluido');
+  const metasConcluidas = metasList.filter(m => m.status === 'concluido');
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header com Blur */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBackButton}>
+          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
             <Icon name="arrow-left" size={20} color="#0F172A" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Minhas metas</Text>
           </View>
-          <TouchableOpacity style={styles.headerAddButton}>
-            <View style={styles.addButtonInner}>
-              <Icon name="plus" size={18} color="#B367D4" />
-            </View>
-          </TouchableOpacity>
+          <View style={{ width: 40 }} />
         </View>
 
-        {/* Perfil e Progresso */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatarRing}>
-              <View style={styles.avatarInnerRing} />
-            </View>
-            <View style={styles.avatarImageContainer}>
-              <Image 
-                source={{ uri: 'https://placehold.co/96x96' }} 
-                style={styles.avatarImage}
-              />
-            </View>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>LVL 5</Text>
-            </View>
-          </View>
-          
-          <View style={styles.congratsContainer}>
-            <Text style={styles.congratsTitle}>Muito bem, Sarah</Text>
-            <Text style={styles.congratsSubtitle}>
-              {progressoGeral}% das suas metas semanais foram atingidas
-            </Text>
-          </View>
-        </View>
-
-        {/* Cards de Estatísticas */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <View style={[styles.statDot, { backgroundColor: '#22C55E' }]} />
-              <Text style={styles.statTitle}>Completas</Text>
+              <Text style={styles.statTitle}>Concluídas</Text>
             </View>
-            <View style={styles.statValueContainer}>
-              <Text style={styles.statNumber}>{stats.completas}</Text>
-              <Text style={[styles.statTrend, { color: '#22C55E' }]}>{stats.aumento}</Text>
-            </View>
+            <Text style={styles.statNumber}>{metasConcluidas.length}</Text>
           </View>
-          
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <View style={[styles.statDot, { backgroundColor: '#B367D4' }]} />
               <Text style={styles.statTitle}>Ativas</Text>
             </View>
-            <View style={styles.statValueContainer}>
-              <Text style={styles.statNumber}>{stats.ativas}</Text>
-              <Text style={[styles.statTrend, { color: '#94A3B8' }]}>Em progresso</Text>
-            </View>
+            <Text style={styles.statNumber}>{metasAtivas.length}</Text>
           </View>
         </View>
 
-        {/* Tabs de Categoria */}
-        <View style={styles.tabsContainer}>
-          <View style={styles.tabsInner}>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'emocional' && styles.tabActive]}
-              onPress={() => setActiveTab('emocional')}
-            >
-              <Text style={[styles.tabText, activeTab === 'emocional' && styles.tabTextActive]}>
-                Emocional
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'comportamental' && styles.tabActive]}
-              onPress={() => setActiveTab('comportamental')}
-            >
-              <Text style={[styles.tabText, activeTab === 'comportamental' && styles.tabTextActive]}>
-                Comportamental
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Lista de Metas */}
         <View style={styles.metasContainer}>
-          <Text style={styles.sectionTitle}>Metas ativas</Text>
-          
-          {/* Meta Ativa */}
-          {metasAtivas.map((meta) => (
-            <View key={meta.id} style={styles.metaCard}>
-              <View style={styles.metaHeader}>
-                <View style={styles.metaInfo}>
-                  <View style={styles.metaCategoryBadge}>
-                    <Text style={[styles.metaCategoryText, { color: meta.cor }]}>
-                      {meta.categoria}
-                    </Text>
-                  </View>
-                  <Text style={styles.metaTitle}>{meta.titulo}</Text>
-                  <Text style={styles.metaDescription}>{meta.descricao}</Text>
-                </View>
-                <TouchableOpacity style={styles.metaMenuButton}>
-                  <Icon name="more-horizontal" size={18} color="#B367D4" />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.progressContainer}>
-                <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>Meta: {meta.total} dias</Text>
-                  <Text style={styles.progressValue}>{meta.progresso}/{meta.total} dias</Text>
-                </View>
-                <View style={styles.progressBarContainer}>
-                  <View 
-                    style={[
-                      styles.progressBar, 
-                      { width: `${(meta.progresso / meta.total) * 100}%`, backgroundColor: meta.cor }
-                    ]} 
-                  />
-                </View>
-              </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#B367D4" style={{ marginTop: 40 }} />
+          ) : metasList.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Icon name="target" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyTitle}>Nenhuma meta ainda</Text>
+              <Text style={styles.emptyText}>Seu psicólogo ainda não cadastrou metas para você.</Text>
             </View>
-          ))}
+          ) : (
+            <>
+              {metasAtivas.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Metas ativas</Text>
+                  {metasAtivas.map((meta) => (
+                    <View key={meta.id} style={styles.metaCard}>
+                      <View style={styles.metaHeader}>
+                        <View style={styles.metaInfo}>
+                          <View style={[styles.metaCategoryBadge, { backgroundColor: getStatusColor(meta.status) + '20' }]}>
+                            <Text style={[styles.metaCategoryText, { color: getStatusColor(meta.status) }]}>
+                              {getStatusLabel(meta.status)}
+                            </Text>
+                          </View>
+                          <Text style={styles.metaTitle}>{meta.titulo}</Text>
+                          <Text style={styles.metaDescription}>{meta.progresso}</Text>
+                          {meta.prazo && meta.prazo !== 'Sem prazo definido' && (
+                            <View style={styles.prazoRow}>
+                              <Icon name="calendar" size={12} color="#94A3B8" />
+                              <Text style={styles.prazoText}>Prazo: {meta.prazo}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
 
-          {/* Meta Concluída */}
-          {metasConcluidas.map((meta) => (
-            <View key={meta.id} style={[styles.metaCard, styles.metaCompleted]}>
-              <View style={styles.metaHeader}>
-                <View style={styles.metaInfo}>
-                  <View style={styles.completedBadge}>
-                    <Icon name="check-circle" size={12} color="#22C55E" />
-                    <Text style={styles.completedText}>{meta.categoria}</Text>
-                  </View>
-                  <Text style={[styles.metaTitle, styles.metaTitleCompleted]}>
-                    {meta.titulo}
-                  </Text>
-                  <Text style={styles.metaDescription}>{meta.descricao}</Text>
-                </View>
-                <View style={styles.completedIconContainer}>
-                  <Icon name="check" size={20} color="#FFFFFF" />
-                </View>
-              </View>
-            </View>
-          ))}
-
-          {/* Ver histórico */}
-          <TouchableOpacity style={styles.historyButton}>
-            <Text style={styles.historyButtonText}>Ver histórico completo</Text>
-          </TouchableOpacity>
+              {metasConcluidas.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Concluídas</Text>
+                  {metasConcluidas.map((meta) => (
+                    <View key={meta.id} style={[styles.metaCard, styles.metaCompleted]}>
+                      <View style={styles.metaHeader}>
+                        <View style={styles.metaInfo}>
+                          <View style={styles.completedBadge}>
+                            <Icon name="check-circle" size={12} color="#22C55E" />
+                            <Text style={styles.completedText}>Concluído</Text>
+                          </View>
+                          <Text style={[styles.metaTitle, styles.metaTitleCompleted]}>{meta.titulo}</Text>
+                        </View>
+                        <View style={styles.completedIconContainer}>
+                          <Icon name="check" size={20} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomePaciente')}>
           <Icon name="home" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
           <Icon name="target" size={20} color="#B367D4" />
           <Text style={[styles.navText, styles.navTextActive]}>Metas</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('DiarioPaciente')}>
           <Icon name="book-open" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Diário</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PerfilPaciente')}>
           <Icon name="user" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Perfil</Text>

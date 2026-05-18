@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,  
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -24,6 +25,7 @@ const CadastroPaciente = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
+  const [tempDate, setTempDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [diagnostico, setDiagnostico] = useState('');
   const [observacoes, setObservacoes] = useState('');
@@ -32,109 +34,100 @@ const CadastroPaciente = ({ navigation }) => {
   const formatTelefone = (text) => {
     let cleaned = text.replace(/\D/g, '');
     if (cleaned.length <= 11) {
-      if (cleaned.length <= 2) {
-        return `(${cleaned}`;
-      } else if (cleaned.length <= 6) {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-      } else if (cleaned.length <= 10) {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-      } else {
-        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
-      }
+      if (cleaned.length <= 2) return `(${cleaned}`;
+      else if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+      else if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+      else return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
     }
     return text;
   };
 
   const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const formattedDate = `${selectedDate.getDate().toString().padStart(2, '0')}/${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
-      setDataNascimento(formattedDate);
-    }
+    if (selectedDate) setTempDate(selectedDate);
   };
 
- const handleSalvar = async () => {
-  if (!nome || !sobrenome || !email) {
-    Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios');
-    return;
-  }
+  const handleConfirmarData = () => {
+    const formattedDate = `${tempDate.getDate().toString().padStart(2, '0')}/${(tempDate.getMonth() + 1).toString().padStart(2, '0')}/${tempDate.getFullYear()}`;
+    setDataNascimento(formattedDate);
+    setShowDatePicker(false);
+  };
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    Alert.alert('Erro', 'Digite um e-mail válido');
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const userStr = await AsyncStorage.getItem('user');
-    const user = JSON.parse(userStr);
-    const token = await AsyncStorage.getItem('token');
-
-    const formatDate = (date) => {
-      if (!date) return null;
-      const [day, month, year] = date.split('/');
-      return `${year}-${month}-${day}`;
-    };
-
-    const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        name: `${nome} ${sobrenome}`,
-        email,
-        phone: telefone.replace(/\D/g, ''),
-        birthDate: formatDate(dataNascimento),
-        diagnostico,
-        observacoes,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      Alert.alert('Erro', data.error || 'Erro ao cadastrar paciente');
+  const handleSalvar = async () => {
+    if (!nome || !sobrenome || !email) {
+      Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Erro', 'Digite um e-mail válido');
+      return;
+    }
+    setLoading(true);
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const token = await AsyncStorage.getItem('token');
 
-    Alert.alert('Sucesso', 'Paciente cadastrado com sucesso!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+      const formatDate = (date) => {
+        if (!date) return null;
+        const [day, month, year] = date.split('/');
+        return `${year}-${month}-${day}`;
+      };
 
-  } catch (err) {
-    console.error(err);
-    Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
-  } finally {
-    setLoading(false);
-  }
-};
+      const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: `${nome} ${sobrenome}`,
+          email,
+          phone: telefone.replace(/\D/g, ''),
+          birthDate: formatDate(dataNascimento),
+          diagnostico,
+          observacoes,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Erro ao cadastrar paciente');
+        return;
+      }
+      Alert.alert('Sucesso', 'Paciente cadastrado com sucesso!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+
+      {/* Header fora do KeyboardAvoidingView */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-left" size={24} color="#4B5563" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Novo Paciente</Text>
+        <View style={{ width: 40 }} />
+      </View>
       
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={0}
       >
         <ScrollView 
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Icon name="arrow-left" size={24} color="#4B5563" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Novo Paciente</Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          {/* Formulário */}
           <View style={styles.form}>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Informações Pessoais</Text>
@@ -150,6 +143,7 @@ const CadastroPaciente = ({ navigation }) => {
                       placeholderTextColor="#9CA3AF"
                       value={nome}
                       onChangeText={setNome}
+                      returnKeyType="next"
                     />
                   </View>
                 </View>
@@ -164,6 +158,7 @@ const CadastroPaciente = ({ navigation }) => {
                       placeholderTextColor="#9CA3AF"
                       value={sobrenome}
                       onChangeText={setSobrenome}
+                      returnKeyType="next"
                     />
                   </View>
                 </View>
@@ -181,6 +176,7 @@ const CadastroPaciente = ({ navigation }) => {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    returnKeyType="next"
                   />
                 </View>
               </View>
@@ -221,13 +217,14 @@ const CadastroPaciente = ({ navigation }) => {
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Diagnóstico Principal</Text>
                 <View style={styles.inputWrapper}>
-                  <Icon name="file-text" size={20} color="#9CA3AF" />
+                  <Icon name="file-text" size={20} color="#9CA3AF" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Ex: Transtorno de Ansiedade"
                     placeholderTextColor="#9CA3AF"
                     value={diagnostico}
                     onChangeText={setDiagnostico}
+                    returnKeyType="next"
                   />
                 </View>
               </View>
@@ -245,6 +242,7 @@ const CadastroPaciente = ({ navigation }) => {
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
+                    returnKeyType="done"
                   />
                 </View>
               </View>
@@ -270,25 +268,26 @@ const CadastroPaciente = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-        {showDatePicker && (
+      {showDatePicker && (
       <Modal transparent animationType="slide">
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+          <View style={{ backgroundColor: '#3A3A3C', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
               <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                <Text style={{ color: '#6B7280', fontSize: 16 }}>Cancelar</Text>
+                <Text style={{ color: '#FFFF', fontSize: 16 }}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                <Text style={{ color: '#6366F1', fontSize: 16, fontWeight: '600' }}>Confirmar</Text>
+              <TouchableOpacity onPress={handleConfirmarData}>
+                <Text style={{ color: '#FFFF', fontSize: 16, fontWeight: '600' }}>Confirmar</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={dataNascimento ? new Date(dataNascimento.split('/').reverse().join('-')) : new Date()}
+              value={tempDate}
               mode="date"
-              display="spinner"
+              display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
               onChange={handleDateChange}
               maximumDate={new Date()}
               locale="pt-BR"
+              style={{ height: 380 }}
             />
           </View>
         </View>
@@ -299,135 +298,30 @@ const CadastroPaciente = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  form: {
-    padding: 20,
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#F9FAFB',
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1F2937',
-    paddingVertical: 14,
-    paddingHorizontal: 0,
-  },
-  placeholderText: {
-    color: '#9CA3AF',
-  },
-  textAreaWrapper: {
-    alignItems: 'flex-start',
-  },
-  textArea: {
-    height: 100,
-    paddingTop: 12,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#6366F1',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  keyboardView: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 80 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
+  form: { padding: 20 },
+  section: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 16 },
+  row: { flexDirection: 'row' },
+  inputContainer: { marginBottom: 16 },
+  inputLabel: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, backgroundColor: '#F9FAFB' },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 16, color: '#1F2937', paddingVertical: 14, paddingHorizontal: 0 },
+  placeholderText: { color: '#9CA3AF' },
+  textAreaWrapper: { alignItems: 'flex-start' },
+  textArea: { height: 100, paddingTop: 12 },
+  buttonContainer: { flexDirection: 'row', gap: 12 },
+  cancelButton: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  cancelButtonText: { fontSize: 16, fontWeight: '500', color: '#6B7280' },
+  saveButton: { flex: 1, backgroundColor: '#6366F1', paddingVertical: 14, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  saveButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });
 
 export default CadastroPaciente;

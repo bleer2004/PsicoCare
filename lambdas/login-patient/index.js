@@ -1,7 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import jwt from "jsonwebtoken";
-import { createHash } from "crypto";
+import bcrypt from "bcryptjs";
 
 const client = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(client);
@@ -15,7 +15,6 @@ export const handler = async (event) => {
       return response(400, { error: "Email e senha são obrigatórios" });
     }
 
-    // Busca paciente pelo email no GSI
     const result = await dynamo.send(new QueryCommand({
       TableName: TABLE_NAME,
       IndexName: "GSI1PK-GSI1SK-index",
@@ -29,27 +28,30 @@ export const handler = async (event) => {
       return response(401, { error: "Email ou senha incorretos" });
     }
 
-    const patient = result.Items[0];
+    const patient = result.Items.find(item => item.PK.startsWith("PATIENT#"));
 
-    // Verifica se é paciente
-    if (!patient.PK.startsWith("PATIENT#")) {
+    if (!patient) {
       return response(401, { error: "Email ou senha incorretos" });
     }
 
-    // Verifica senha (SHA-256)
-    const passwordHash = createHash("sha256").update(password).digest("hex");
-    if (patient.passwordHash !== passwordHash) {
+    // Verifica senha — tempPassword direto, senão bcrypt
+    let senhaValida = false;
+    if (patient.tempPassword && patient.tempPassword === password) {
+      senhaValida = true;
+    } else {
+      senhaValida = await bcrypt.compare(password, patient.passwordHash);
+    }
+
+    if (!senhaValida) {
       return response(401, { error: "Email ou senha incorretos" });
     }
 
-    // Verifica se está ativo
     if (!patient.isActive) {
       return response(403, { error: "Conta desativada. Contate seu psicólogo." });
     }
 
     const patientId = patient.PK.split("#")[1];
 
-    // Gera token JWT
     const token = jwt.sign(
       { id: patientId, email: patient.email, type: "PATIENT" },
       process.env.JWT_SECRET,
@@ -64,11 +66,12 @@ export const handler = async (event) => {
         email: patient.email,
         type: "PATIENT",
         clinicianId: patient.clinicianId,
+        mustChangePassword: patient.mustChangePassword || false,
       }
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('ERRO:', err);
     return response(500, { error: "Erro interno do servidor" });
   }
 };

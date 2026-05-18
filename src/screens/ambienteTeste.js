@@ -6,7 +6,7 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Image,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
@@ -15,11 +15,14 @@ const AmbienteTeste = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
       
-      <View style={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoIconWrapper}>
-            <Icon name="brain" size={40} color="#B367D4" />
+            <Icon name="heart" size={40} color="#B367D4" />
           </View>
           <Text style={styles.logoText}>PsicoCare</Text>
           <Text style={styles.logoSubtext}>Plataforma clínica de saúde mental</Text>
@@ -36,14 +39,14 @@ const AmbienteTeste = ({ navigation }) => {
           {/* Botão Psicólogo */}
           <TouchableOpacity 
             style={[styles.card, styles.psychologistCard]}
-            onPress={() => navigation.replace('VisaoGeral')}
+            onPress={() => navigation.replace('LoginSignedUp')}
             activeOpacity={0.8}
           >
             <View style={styles.cardIconWrapper}>
-              <Icon name="user-md" size={32} color="#FFFFFF" />
+              <Icon name="briefcase" size={32} color="#FFFFFF" />
             </View>
-            <Text style={styles.cardTitle}>Psicólogo</Text>
-            <Text style={styles.cardDescription}>
+            <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>Psicólogo</Text>
+            <Text style={[styles.cardDescription, { color: 'rgba(255,255,255,0.85)' }]}>
               Acesse o painel profissional, gerencie pacientes, visualize relatórios e análises clínicas.
             </Text>
             <View style={styles.cardFooter}>
@@ -58,10 +61,10 @@ const AmbienteTeste = ({ navigation }) => {
             activeOpacity={0.8}
           >
             <View style={[styles.cardIconWrapper, styles.patientIconWrapper]}>
-              <Icon name="user" size={32} color="#FFFFFF" />
+              <Icon name="user" size={32} color="#B367D4" />
             </View>
-            <Text style={styles.cardTitle}>Paciente</Text>
-            <Text style={styles.cardDescription}>
+            <Text style={[styles.cardTitle, { color: '#0F172A' }]}>Paciente</Text>
+            <Text style={[styles.cardDescription, { color: '#64748B' }]}>
               Acesse seu diário emocional, acompanhe metas, visualize documentos e compartilhe com seu psicólogo.
             </Text>
             <View style={styles.cardFooter}>
@@ -70,7 +73,7 @@ const AmbienteTeste = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Ambiente seguro */}
+        {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.securityBadge}>
             <Icon name="shield" size={12} color="#10B981" />
@@ -78,7 +81,7 @@ const AmbienteTeste = ({ navigation }) => {
           </View>
           <Text style={styles.versionText}>Versão 1.0.0 - Ambiente de Testes</Text>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };

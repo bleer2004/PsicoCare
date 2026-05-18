@@ -1,16 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../../../src/services/api';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  Alert,
-  Share,
-  Modal,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView,
+  StatusBar, ScrollView, Alert, Modal, ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
@@ -19,53 +12,50 @@ const DiarioPaciente = ({ navigation }) => {
   const [anotacao, setAnotacao] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAnotacao, setSelectedAnotacao] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [anotacoes, setAnotacoes] = useState([]);
 
   const moods = [
-    { id: 'feliz', label: 'Feliz', color: '#E3F2FD', iconColor: '#2563EB', emoji: '😃' },
-    { id: 'calmo', label: 'Calmo', color: '#E0F2F1', iconColor: '#0D9488', emoji: '😌' },
-    { id: 'ansioso', label: 'Ansioso', color: '#F3E5F5', iconColor: '#9333EA', emoji: '😰' },
-    { id: 'triste', label: 'Triste', color: '#FCE4EC', iconColor: '#DB2777', emoji: '😢' },
-    { id: 'neutral', label: 'Neutral', color: '#F1F5F9', iconColor: '#64748B', emoji: '😐' },
+    { id: 'feliz', label: 'Feliz', color: '#E3F2FD', iconColor: '#2563EB', emoji: '😃', valence: 8, arousal: 7 },
+    { id: 'calmo', label: 'Calmo', color: '#E0F2F1', iconColor: '#0D9488', emoji: '😌', valence: 7, arousal: 3 },
+    { id: 'ansioso', label: 'Ansioso', color: '#F3E5F5', iconColor: '#9333EA', emoji: '😰', valence: 3, arousal: 8 },
+    { id: 'triste', label: 'Triste', color: '#FCE4EC', iconColor: '#DB2777', emoji: '😢', valence: 2, arousal: 2 },
+    { id: 'neutral', label: 'Neutral', color: '#F1F5F9', iconColor: '#64748B', emoji: '😐', valence: 5, arousal: 5 },
   ];
 
-  const [anotacoes, setAnotacoes] = useState([
-    {
-      id: '1',
-      humor: 'feliz',
-      titulo: 'Se sentindo alegre',
-      texto: 'Hoje dei uma caminhada matinal com meu cachorro e me senti melhor durante o dia.',
-      data: 'Ontem - 10:30',
-      compartilhada: false,
-    },
-    {
-      id: '2',
-      humor: 'calmo',
-      titulo: 'Dia tranquilo',
-      texto: 'Consegui meditar por 10 minutos hoje pela manhã. Me ajudou a começar o dia melhor.',
-      data: '16/05/2024 - 09:15',
-      compartilhada: true,
-    },
-    {
-      id: '3',
-      humor: 'ansioso',
-      titulo: 'Dia desafiador',
-      texto: 'Tive uma apresentação no trabalho e fiquei muito nervosa. Mas consegui respirar e me acalmar.',
-      data: '15/05/2024 - 14:30',
-      compartilhada: false,
-    },
-  ]);
+  useEffect(() => {
+    carregarHistorico();
+  }, []);
 
-  const getMoodEmoji = (moodId) => {
-    const mood = moods.find(m => m.id === moodId);
-    return mood ? mood.emoji : '😐';
+  const carregarHistorico = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const response = await fetch(`${API_URL}/patients/${user.id}/moods?limit=10`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const formatados = (data.moods || [])
+          .filter(m => m.diaryText)
+          .map((m, i) => ({
+            id: String(i),
+            humor: m.contextTags?.[0] || 'neutral',
+            titulo: `Se sentindo ${m.contextTags?.[0] || 'neutral'}`,
+            texto: m.diaryText,
+            data: new Date(m.timestamp).toLocaleDateString('pt-BR'),
+          }));
+        setAnotacoes(formatados);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const getMoodTitle = (moodId) => {
-    const mood = moods.find(m => m.id === moodId);
-    return mood ? `Se sentindo ${mood.label.toLowerCase()}` : 'Registro emocional';
-  };
+  const getMoodEmoji = (moodId) => moods.find(m => m.id === moodId)?.emoji || '😐';
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!selectedMood) {
       Alert.alert('Atenção', 'Selecione como você está se sentindo');
       return;
@@ -75,98 +65,56 @@ const DiarioPaciente = ({ navigation }) => {
       return;
     }
 
-    const novaAnotacao = {
-      id: String(anotacoes.length + 1),
-      humor: selectedMood,
-      titulo: getMoodTitle(selectedMood),
-      texto: anotacao,
-      data: new Date().toLocaleDateString('pt-BR') + ' - ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      compartilhada: false,
-    };
-
-    setAnotacoes([novaAnotacao, ...anotacoes]);
-    setSelectedMood(null);
-    setAnotacao('');
-    Alert.alert('Sucesso', 'Anotação salva com sucesso!');
-  };
-
-  const handleCompartilhar = async (anotacaoItem) => {
+    setLoading(true);
     try {
-      const mood = moods.find(m => m.id === anotacaoItem.humor);
-      const mensagem = `📔 *Diário PsicoCare*\n\n${mood?.emoji || '📝'} *${anotacaoItem.titulo}*\n\n📅 ${anotacaoItem.data}\n\n"${anotacaoItem.texto}"\n\n---\nCompartilhado via PsicoCare`;
-      
-      await Share.share({
-        message: mensagem,
-        title: `Diário - ${anotacaoItem.titulo}`,
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const mood = moods.find(m => m.id === selectedMood);
+
+      const response = await fetch(`${API_URL}/patients/${user.id}/moods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          valenceScore: mood.valence,
+          arousalScore: mood.arousal,
+          contextTags: [selectedMood],
+          diaryText: anotacao,
+        })
       });
-      
-      // Marcar como compartilhada
-      setAnotacoes(anotacoes.map(a => 
-        a.id === anotacaoItem.id ? { ...a, compartilhada: true } : a
-      ));
-      
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível compartilhar');
+
+      if (response.ok) {
+        setSelectedMood(null);
+        setAnotacao('');
+        Alert.alert('Sucesso', 'Anotação salva com sucesso!');
+        await carregarHistorico();
+      }
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível salvar a anotação');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleCompartilharComPsicologo = (anotacaoItem) => {
-    Alert.alert(
-      'Compartilhar com psicólogo',
-      'Deseja compartilhar esta anotação com seu psicólogo? Ele poderá ver e acompanhar seu progresso.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Compartilhar', 
-          onPress: () => {
-            setAnotacoes(anotacoes.map(a => 
-              a.id === anotacaoItem.id ? { ...a, compartilhada: true } : a
-            ));
-            Alert.alert('Sucesso', 'Anotação compartilhada com seu psicólogo!');
-          }
-        }
-      ]
-    );
-  };
-
-  const handleVerAnotacao = (anotacaoItem) => {
-    setSelectedAnotacao(anotacaoItem);
-    setModalVisible(true);
-  };
-
-  const handleVerHistorico = () => {
-    Alert.alert('Histórico completo', 'Funcionalidade em desenvolvimento');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Icon name="arrow-left" size={20} color="#B367D4" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Diário emocional</Text>
           <View style={styles.headerPlaceholder} />
         </View>
 
-        {/* Seletor de Humor */}
         <View style={styles.moodSection}>
           <Text style={styles.moodTitle}>Como você está se sentindo hoje?</Text>
           <View style={styles.moodContainer}>
             {moods.map((mood) => (
               <TouchableOpacity
                 key={mood.id}
-                style={[
-                  styles.moodItem,
-                  selectedMood === mood.id && styles.moodItemSelected
-                ]}
+                style={[styles.moodItem, selectedMood === mood.id && styles.moodItemSelected]}
                 onPress={() => setSelectedMood(mood.id)}
               >
                 <View style={[styles.moodIconWrapper, { backgroundColor: mood.color }]}>
@@ -178,12 +126,11 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Campo de Anotação */}
         <View style={styles.anotacaoSection}>
           <View style={styles.anotacaoContainer}>
             <TextInput
               style={styles.anotacaoInput}
-              placeholder="Este é um local seguro, expresse suas ideias, pensamentos... sinta-se à vontade."
+              placeholder="Este é um local seguro, expresse suas ideias, pensamentos..."
               placeholderTextColor="#94A3B8"
               multiline
               value={anotacao}
@@ -193,60 +140,37 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Botão Salvar */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSalvar}>
-          <Text style={styles.saveButtonText}>Salvar</Text>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSalvar} disabled={loading}>
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveButtonText}>Salvar</Text>}
         </TouchableOpacity>
 
-        {/* Anotações Recentes */}
         <View style={styles.recentSection}>
           <Text style={styles.recentTitle}>Anotações recentes</Text>
-          
-          {anotacoes.map((item) => (
-            <TouchableOpacity 
-              key={item.id} 
-              style={styles.anotacaoCard}
-              onPress={() => handleVerAnotacao(item)}
-            >
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  <Text style={styles.cardEmoji}>{getMoodEmoji(item.humor)}</Text>
-                  <View>
-                    <Text style={styles.cardTitle}>{item.titulo}</Text>
-                    <Text style={styles.cardDate}>{item.data}</Text>
+          {anotacoes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Icon name="book-open" size={40} color="#D1D5DB" />
+              <Text style={styles.emptyText}>Nenhuma anotação ainda</Text>
+            </View>
+          ) : (
+            anotacoes.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.anotacaoCard} onPress={() => { setSelectedAnotacao(item); setModalVisible(true); }}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderLeft}>
+                    <Text style={styles.cardEmoji}>{getMoodEmoji(item.humor)}</Text>
+                    <View>
+                      <Text style={styles.cardTitle}>{item.titulo}</Text>
+                      <Text style={styles.cardDate}>{item.data}</Text>
+                    </View>
                   </View>
                 </View>
-                <View style={styles.cardActions}>
-                  {item.compartilhada && (
-                    <View style={styles.sharedBadge}>
-                      <Icon name="share-2" size={10} color="#10B981" />
-                      <Text style={styles.sharedText}>Compart.</Text>
-                    </View>
-                  )}
-                  <TouchableOpacity onPress={() => handleCompartilharComPsicologo(item)}>
-                    <Icon name="share-2" size={16} color="#B367D4" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <Text style={styles.cardText} numberOfLines={2}>
-                {item.texto}
-              </Text>
-            </TouchableOpacity>
-          ))}
-
-          <TouchableOpacity style={styles.historyButton} onPress={handleVerHistorico}>
-            <Text style={styles.historyButtonText}>Ver histórico completo</Text>
-          </TouchableOpacity>
+                <Text style={styles.cardText} numberOfLines={2}>{item.texto}</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
-      {/* Modal de Detalhes da Anotação */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -255,7 +179,6 @@ const DiarioPaciente = ({ navigation }) => {
                 <Icon name="x" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
-            
             {selectedAnotacao && (
               <ScrollView style={styles.modalContent}>
                 <View style={styles.modalMood}>
@@ -264,52 +187,25 @@ const DiarioPaciente = ({ navigation }) => {
                 </View>
                 <Text style={styles.modalDate}>{selectedAnotacao.data}</Text>
                 <Text style={styles.modalText}>{selectedAnotacao.texto}</Text>
-                
-                <View style={styles.modalActions}>
-                  <TouchableOpacity 
-                    style={styles.modalShareButton}
-                    onPress={() => {
-                      handleCompartilhar(selectedAnotacao);
-                      setModalVisible(false);
-                    }}
-                  >
-                    <Icon name="share-2" size={18} color="#FFFFFF" />
-                    <Text style={styles.modalShareText}>Compartilhar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.modalPsychButton}
-                    onPress={() => {
-                      handleCompartilharComPsicologo(selectedAnotacao);
-                      setModalVisible(false);
-                    }}
-                  >
-                    <Icon name="user" size={18} color="#B367D4" />
-                    <Text style={styles.modalPsychText}>Compartilhar com psicólogo</Text>
-                  </TouchableOpacity>
-                </View>
               </ScrollView>
             )}
           </View>
         </View>
       </Modal>
 
-      {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomePaciente')}>
           <Icon name="home" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('MetasPaciente')}>
-          <Icon name="target" size={20} color="#94A3B8" />
-          <Text style={styles.navText}>Metas</Text>
-        </TouchableOpacity>
-        
         <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
           <Icon name="book-open" size={20} color="#B367D4" />
           <Text style={[styles.navText, styles.navTextActive]}>Diário</Text>
         </TouchableOpacity>
-        
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('MetasPaciente')}>
+          <Icon name="target" size={20} color="#94A3B8" />
+          <Text style={styles.navText}>Metas</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PerfilPaciente')}>
           <Icon name="user" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Perfil</Text>
