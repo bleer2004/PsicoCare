@@ -66,7 +66,7 @@ const DashboardPaciente = ({ navigation, route }) => {
   });
 
   // Lista de Metas
- const [metasList, setMetasList] = useState([]);
+  const [metasList, setMetasList] = useState([]);
 
   useEffect(() => {
     carregarMetas();
@@ -190,80 +190,80 @@ const DashboardPaciente = ({ navigation, route }) => {
   ];
 
   // ========== FUNÇÕES DAS METAS ==========
-const handleAdicionarMeta = async () => {
-  if (!novaMeta.trim()) {
-    Alert.alert('Erro', 'Digite uma meta válida');
-    return;
-  }
-
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const response = await fetch(`${API_URL}/patients/${paciente.id}/goals`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        titulo: novaMeta,
-        prazo: novaMetaPrazo || 'Sem prazo definido',
-      })
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      Alert.alert('Erro', data.error || 'Erro ao adicionar meta');
+  const handleAdicionarMeta = async () => {
+    if (!novaMeta.trim()) {
+      Alert.alert('Erro', 'Digite uma meta válida');
       return;
     }
 
-    await carregarMetas();
-    setNovaMeta('');
-    setNovaMetaPrazo('');
-    setModalMetasVisible(false);
-    Alert.alert('Sucesso', 'Meta adicionada com sucesso!');
-  } catch (err) {
-    Alert.alert('Erro', 'Não foi possível adicionar a meta');
-  }
-};
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/patients/${paciente.id}/goals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          titulo: novaMeta,
+          prazo: novaMetaPrazo || 'Sem prazo definido',
+        })
+      });
 
-const handleAtualizarStatusMeta = async (id, novoStatus) => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    await fetch(`${API_URL}/patients/${paciente.id}/goals/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ status: novoStatus, progresso: novoStatus === 'concluido' ? 'Concluído!' : 'Em andamento' })
-    });
-    await carregarMetas();
-  } catch (err) {
-    Alert.alert('Erro', 'Não foi possível atualizar a meta');
-  }
-};
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Erro ao adicionar meta');
+        return;
+      }
 
-const handleRemoverMeta = (id) => {
-  Alert.alert(
-    'Remover meta',
-    'Tem certeza que deseja remover esta meta?',
-    [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: async () => {
-        try {
-          const token = await AsyncStorage.getItem('token');
-          await fetch(`${API_URL}/patients/${paciente.id}/goals/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          await carregarMetas();
-        } catch (err) {
-          Alert.alert('Erro', 'Não foi possível remover a meta');
-        }
-      }}
-    ]
-  );
-};
+      await carregarMetas();
+      setNovaMeta('');
+      setNovaMetaPrazo('');
+      setModalMetasVisible(false);
+      Alert.alert('Sucesso', 'Meta adicionada com sucesso!');
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível adicionar a meta');
+    }
+  };
+
+  const handleAtualizarStatusMeta = async (id, novoStatus) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_URL}/patients/${paciente.id}/goals/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: novoStatus, progresso: novoStatus === 'concluido' ? 'Concluído!' : 'Em andamento' })
+      });
+      await carregarMetas();
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível atualizar a meta');
+    }
+  };
+
+  const handleRemoverMeta = (id) => {
+    Alert.alert(
+      'Remover meta',
+      'Tem certeza que deseja remover esta meta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Remover', style: 'destructive', onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            await fetch(`${API_URL}/patients/${paciente.id}/goals/${id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            await carregarMetas();
+          } catch (err) {
+            Alert.alert('Erro', 'Não foi possível remover a meta');
+          }
+        }}
+      ]
+    );
+  };
 
   // ========== FUNÇÕES DOS INSIGHTS ==========
   const handleAdicionarInsight = () => {
@@ -439,7 +439,7 @@ const handleRemoverMeta = (id) => {
       case 'JPG':
       case 'JPEG':
       case 'PNG': return <Icon name="image" size={24} color="#10B981" />;
-      default: return <Icon name="file" size={24} color="#6366F1" />;
+      default: return <Icon name="file" size={24} color="#B367D4" />;
     }
   };
 
@@ -449,7 +449,7 @@ const handleRemoverMeta = (id) => {
     datasets: [
       {
         data: [65, 70, 68, 72, 75, 78, 80],
-        color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+        color: (opacity = 1) => `rgba(179, 103, 212, ${opacity})`,
         strokeWidth: 2,
         legend: 'Humor (%)',
       },
@@ -490,7 +490,7 @@ const handleRemoverMeta = (id) => {
     switch(status) {
       case 'concluido': return '#10B981';
       case 'andamento': return '#F59E0B';
-      default: return '#6366F1';
+      default: return '#B367D4';
     }
   };
 
@@ -517,7 +517,7 @@ const handleRemoverMeta = (id) => {
             <Text style={styles.idText}>ID: {paciente.id}</Text>
           </View>
         </View>
-        <Text style={styles.pacienteIdade}> {paciente.idade} anos</Text>
+        <Text style={styles.pacienteIdade}>{paciente.idade} anos</Text>
         
         <View style={styles.condicaoContainer}>
           <Text style={styles.condicaoLabel}>CONDIÇÃO</Text>
@@ -556,7 +556,7 @@ const handleRemoverMeta = (id) => {
             <Text style={styles.tagText}>ADESÃO MEDICAMENTOSA</Text>
           </View>
           <View style={styles.tag}>
-            <Icon name="heart" size={14} color="#6366F1" />
+            <Icon name="heart" size={14} color="#B367D4" />
             <Text style={styles.tagText}>MINDFULNESS SEMANAL</Text>
           </View>
         </View>
@@ -566,13 +566,13 @@ const handleRemoverMeta = (id) => {
         <Text style={styles.cardTitle}>Smartwatch</Text>
         <View style={styles.smartwatchRow}>
           <View style={styles.smartwatchItem}>
-            <Icon name="activity" size={24} color="#6366F1" />
+            <Icon name="activity" size={24} color="#B367D4" />
             <Text style={styles.smartwatchValue}>{smartwatchData.batimentos}</Text>
             <Text style={styles.smartwatchLabel}>BPM</Text>
           </View>
           <View style={styles.smartwatchDivider} />
           <View style={styles.smartwatchItem}>
-            <Icon name="moon" size={24} color="#6366F1" />
+            <Icon name="moon" size={24} color="#B367D4" />
             <Text style={styles.smartwatchValue}>{smartwatchData.qualidadeSono}%</Text>
             <Text style={styles.smartwatchLabel}>Qualidade Sono</Text>
           </View>
@@ -599,7 +599,7 @@ const handleRemoverMeta = (id) => {
             backgroundGradientTo: '#FFFFFF',
             decimalPlaces: 0,
             color: (opacity = 1, index) => {
-              if (index === 0) return `rgba(99, 102, 241, ${opacity})`;
+              if (index === 0) return `rgba(179, 103, 212, ${opacity})`;
               return `rgba(16, 185, 129, ${opacity})`;
             },
             labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
@@ -622,7 +622,7 @@ const handleRemoverMeta = (id) => {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>🎯 Metas do Paciente</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => setModalMetasVisible(true)}>
-          <Icon name="plus" size={20} color="#6366F1" />
+          <Icon name="plus" size={20} color="#B367D4" />
           <Text style={styles.addButtonText}>Nova Meta</Text>
         </TouchableOpacity>
       </View>
@@ -669,7 +669,7 @@ const handleRemoverMeta = (id) => {
       <View style={[styles.sectionHeader, { marginTop: 24 }]}>
         <Text style={styles.sectionTitle}>💡 Insights Clínicos</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => setModalInsightVisible(true)}>
-          <Icon name="plus" size={20} color="#6366F1" />
+          <Icon name="plus" size={20} color="#B367D4" />
           <Text style={styles.addButtonText}>Novo Insight</Text>
         </TouchableOpacity>
       </View>
@@ -697,7 +697,7 @@ const handleRemoverMeta = (id) => {
       <View style={[styles.sectionHeader, { marginTop: 24 }]}>
         <Text style={styles.sectionTitle}>📅 Lembretes para a Semana</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => setModalLembreteVisible(true)}>
-          <Icon name="plus" size={20} color="#6366F1" />
+          <Icon name="plus" size={20} color="#B367D4" />
           <Text style={styles.addButtonText}>Novo Lembrete</Text>
         </TouchableOpacity>
       </View>
@@ -713,7 +713,7 @@ const handleRemoverMeta = (id) => {
             <View key={lembrete.id} style={styles.lembreteCard}>
               <View style={styles.lembreteHeader}>
                 <View style={styles.lembreteDia}>
-                  <Icon name="calendar" size={14} color="#6366F1" />
+                  <Icon name="calendar" size={14} color="#B367D4" />
                   <Text style={styles.lembreteDiaText}>{getDiaLabel(lembrete.dia)}</Text>
                 </View>
                 {lembrete.enviado && (
@@ -726,7 +726,7 @@ const handleRemoverMeta = (id) => {
               <Text style={styles.lembreteTexto}>{lembrete.texto}</Text>
               <View style={styles.lembreteActions}>
                 <TouchableOpacity style={styles.enviarBtn} onPress={() => handleEnviarLembrete(lembrete)}>
-                  <Icon name="send" size={16} color="#6366F1" />
+                  <Icon name="send" size={16} color="#B367D4" />
                   <Text style={styles.enviarBtnText}>Enviar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.removerBtn} onPress={() => handleRemoverLembrete(lembrete.id)}>
@@ -752,7 +752,7 @@ const handleRemoverMeta = (id) => {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>📄 Arquivos Compartilhados</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => setModalArquivoVisible(true)}>
-          <Icon name="plus" size={20} color="#6366F1" />
+          <Icon name="plus" size={20} color="#B367D4" />
           <Text style={styles.addButtonText}>Anexar Arquivo</Text>
         </TouchableOpacity>
       </View>
@@ -777,7 +777,7 @@ const handleRemoverMeta = (id) => {
             </View>
             <View style={styles.arquivoActions}>
               <TouchableOpacity style={styles.analiseBtn} onPress={() => handleVerAnalise(arquivo, 'arquivo')}>
-                <Icon name="cpu" size={16} color="#6366F1" />
+                <Icon name="cpu" size={16} color="#B367D4" />
                 <Text style={styles.analiseBtnText}>Análise da IA</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.downloadBtn} onPress={() => handleBaixarArquivo(arquivo)}>
@@ -816,7 +816,7 @@ const handleRemoverMeta = (id) => {
               </View>
               <Text style={styles.anotacaoTexto} numberOfLines={2}>{anotacao.texto}</Text>
               <TouchableOpacity style={styles.analiseBtn} onPress={() => handleVerAnalise(anotacao, 'anotacao')}>
-                <Icon name="cpu" size={14} color="#6366F1" />
+                <Icon name="cpu" size={14} color="#B367D4" />
                 <Text style={styles.analiseBtnText}>Ver análise da IA</Text>
               </TouchableOpacity>
             </View>
@@ -838,7 +838,7 @@ const handleRemoverMeta = (id) => {
   // ========== RENDER PRINCIPAL ==========
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
       
       <ScrollView 
         style={styles.scrollView}
@@ -848,10 +848,10 @@ const handleRemoverMeta = (id) => {
         {/* Header com Voltar e Exportar */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-left" size={24} color="#4B5563" />
+            <View style={styles.backIcon} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleExportarRelatorio} style={styles.exportButton}>
-            <Icon name="download" size={20} color="#6366F1" />
+            <Icon name="download" size={18} color="#B367D4" />
             <Text style={styles.exportText}>Exportar</Text>
           </TouchableOpacity>
         </View>
@@ -862,7 +862,7 @@ const handleRemoverMeta = (id) => {
             style={[styles.tab, abaAtiva === 'perfil' && styles.tabActive]}
             onPress={() => setAbaAtiva('perfil')}
           >
-            <Icon name="user" size={18} color={abaAtiva === 'perfil' ? '#6366F1' : '#9CA3AF'} />
+            <Icon name="user" size={18} color={abaAtiva === 'perfil' ? '#B367D4' : '#94A3B8'} />
             <Text style={[styles.tabText, abaAtiva === 'perfil' && styles.tabTextActive]}>Perfil</Text>
           </TouchableOpacity>
           
@@ -870,7 +870,7 @@ const handleRemoverMeta = (id) => {
             style={[styles.tab, abaAtiva === 'metas' && styles.tabActive]}
             onPress={() => setAbaAtiva('metas')}
           >
-            <Icon name="target" size={18} color={abaAtiva === 'metas' ? '#6366F1' : '#9CA3AF'} />
+            <Icon name="target" size={18} color={abaAtiva === 'metas' ? '#B367D4' : '#94A3B8'} />
             <Text style={[styles.tabText, abaAtiva === 'metas' && styles.tabTextActive]}>Metas</Text>
           </TouchableOpacity>
           
@@ -878,7 +878,7 @@ const handleRemoverMeta = (id) => {
             style={[styles.tab, abaAtiva === 'arquivos' && styles.tabActive]}
             onPress={() => setAbaAtiva('arquivos')}
           >
-            <Icon name="folder" size={18} color={abaAtiva === 'arquivos' ? '#6366F1' : '#9CA3AF'} />
+            <Icon name="folder" size={18} color={abaAtiva === 'arquivos' ? '#B367D4' : '#94A3B8'} />
             <Text style={[styles.tabText, abaAtiva === 'arquivos' && styles.tabTextActive]}>Arquivos</Text>
           </TouchableOpacity>
           
@@ -886,7 +886,7 @@ const handleRemoverMeta = (id) => {
             style={[styles.tab, abaAtiva === 'relatorios' && styles.tabActive]}
             onPress={() => setAbaAtiva('relatorios')}
           >
-            <Icon name="bar-chart-2" size={18} color={abaAtiva === 'relatorios' ? '#6366F1' : '#9CA3AF'} />
+            <Icon name="bar-chart-2" size={18} color={abaAtiva === 'relatorios' ? '#B367D4' : '#94A3B8'} />
             <Text style={[styles.tabText, abaAtiva === 'relatorios' && styles.tabTextActive]}>Relatórios</Text>
           </TouchableOpacity>
           
@@ -894,7 +894,7 @@ const handleRemoverMeta = (id) => {
             style={[styles.tab, abaAtiva === 'smartwatch' && styles.tabActive]}
             onPress={() => setAbaAtiva('smartwatch')}
           >
-            <Icon name="watch" size={18} color={abaAtiva === 'smartwatch' ? '#6366F1' : '#9CA3AF'} />
+            <Icon name="watch" size={18} color={abaAtiva === 'smartwatch' ? '#B367D4' : '#94A3B8'} />
             <Text style={[styles.tabText, abaAtiva === 'smartwatch' && styles.tabTextActive]}>Smartwatch</Text>
           </TouchableOpacity>
         </View>
@@ -907,22 +907,23 @@ const handleRemoverMeta = (id) => {
         {abaAtiva === 'smartwatch' && renderAbaSmartwatch()}
       </ScrollView>
 
-      {/* ========== MODAL DE ADICIONAR META ========== */}
+      {/* ========== MODAIS ========== */}
+      {/* Modal de Adicionar Meta */}
       <Modal animationType="slide" transparent={true} visible={modalMetasVisible} onRequestClose={() => setModalMetasVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nova Meta</Text>
               <TouchableOpacity onPress={() => setModalMetasVisible(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalContent}>
               <Text style={styles.inputLabel}>Descrição da Meta</Text>
-              <TextInput style={styles.modalInput} placeholder="Ex: Praticar meditação diariamente" value={novaMeta} onChangeText={setNovaMeta} multiline />
+              <TextInput style={styles.modalInput} placeholder="Ex: Praticar meditação diariamente" placeholderTextColor="#94A3B8" value={novaMeta} onChangeText={setNovaMeta} multiline />
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>Prazo (opcional)</Text>
-              <TextInput style={styles.modalInput} placeholder="Ex: 30/06/2024" value={novaMetaPrazo} onChangeText={setNovaMetaPrazo} />
+              <TextInput style={styles.modalInput} placeholder="Ex: 30/06/2024" placeholderTextColor="#94A3B8" value={novaMetaPrazo} onChangeText={setNovaMetaPrazo} />
               
               <TouchableOpacity style={styles.modalButton} onPress={handleAdicionarMeta}>
                 <Text style={styles.modalButtonText}>Adicionar Meta</Text>
@@ -932,19 +933,19 @@ const handleRemoverMeta = (id) => {
         </View>
       </Modal>
 
-      {/* ========== MODAL DE ADICIONAR INSIGHT ========== */}
+      {/* Modal de Adicionar Insight */}
       <Modal animationType="slide" transparent={true} visible={modalInsightVisible} onRequestClose={() => setModalInsightVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Novo Insight</Text>
               <TouchableOpacity onPress={() => setModalInsightVisible(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalContent}>
               <Text style={styles.inputLabel}>Insight Clínico</Text>
-              <TextInput style={[styles.modalInput, styles.textArea]} placeholder="Digite seu insight sobre o paciente..." value={novoInsight} onChangeText={setNovoInsight} multiline numberOfLines={4} textAlignVertical="top" />
+              <TextInput style={[styles.modalInput, styles.textArea]} placeholder="Digite seu insight sobre o paciente..." placeholderTextColor="#94A3B8" value={novoInsight} onChangeText={setNovoInsight} multiline numberOfLines={4} textAlignVertical="top" />
               
               <TouchableOpacity style={styles.modalButton} onPress={handleAdicionarInsight}>
                 <Text style={styles.modalButtonText}>Adicionar Insight</Text>
@@ -954,14 +955,14 @@ const handleRemoverMeta = (id) => {
         </View>
       </Modal>
 
-      {/* ========== MODAL DE ADICIONAR LEMBRETE ========== */}
+      {/* Modal de Adicionar Lembrete */}
       <Modal animationType="slide" transparent={true} visible={modalLembreteVisible} onRequestClose={() => setModalLembreteVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Novo Lembrete</Text>
               <TouchableOpacity onPress={() => setModalLembreteVisible(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalContent}>
@@ -975,7 +976,7 @@ const handleRemoverMeta = (id) => {
               </View>
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>Lembrete</Text>
-              <TextInput style={styles.modalInput} placeholder="Digite o lembrete..." value={novoLembrete} onChangeText={setNovoLembrete} multiline />
+              <TextInput style={styles.modalInput} placeholder="Digite o lembrete..." placeholderTextColor="#94A3B8" value={novoLembrete} onChangeText={setNovoLembrete} multiline />
               
               <TouchableOpacity style={styles.modalButton} onPress={handleAdicionarLembrete}>
                 <Text style={styles.modalButtonText}>Adicionar Lembrete</Text>
@@ -985,14 +986,14 @@ const handleRemoverMeta = (id) => {
         </View>
       </Modal>
 
-      {/* ========== MODAL PARA ESCOLHER TIPO DE ARQUIVO ========== */}
+      {/* Modal para Escolher Tipo de Arquivo */}
       <Modal animationType="slide" transparent={true} visible={modalArquivoVisible} onRequestClose={() => setModalArquivoVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Anexar Arquivo</Text>
               <TouchableOpacity onPress={() => setModalArquivoVisible(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalContent}>
@@ -1017,17 +1018,17 @@ const handleRemoverMeta = (id) => {
         </View>
       </Modal>
 
-      {/* ========== MODAL DE ANÁLISE DA IA ========== */}
+      {/* Modal de Análise da IA */}
       <Modal animationType="fade" transparent={true} visible={modalAnaliseVisible} onRequestClose={() => setModalAnaliseVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.analiseModalContainer}>
             <View style={styles.analiseModalHeader}>
               <View style={styles.analiseIcon}>
-                <Icon name="cpu" size={24} color="#6366F1" />
+                <Icon name="cpu" size={24} color="#B367D4" />
               </View>
               <Text style={styles.analiseModalTitle}>Análise da IA</Text>
               <TouchableOpacity onPress={() => setModalAnaliseVisible(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.analiseModalContent}>
@@ -1042,14 +1043,14 @@ const handleRemoverMeta = (id) => {
         </View>
       </Modal>
 
-      {/* ========== MODAL DE VER ANOTAÇÃO COMPLETA ========== */}
+      {/* Modal de Ver Anotação Completa */}
       <Modal animationType="slide" transparent={true} visible={modalAnotacaoVisible} onRequestClose={() => setModalAnotacaoVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{anotacaoSelecionada?.titulo}</Text>
               <TouchableOpacity onPress={() => setModalAnotacaoVisible(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalContent}>
@@ -1058,7 +1059,7 @@ const handleRemoverMeta = (id) => {
               
               <View style={styles.analiseSection}>
                 <View style={styles.analiseSectionHeader}>
-                  <Icon name="cpu" size={18} color="#6366F1" />
+                  <Icon name="cpu" size={18} color="#B367D4" />
                   <Text style={styles.analiseSectionTitle}>Análise da IA</Text>
                 </View>
                 <Text style={styles.analiseSectionText}>{anotacaoSelecionada?.analise}</Text>
@@ -1071,25 +1072,25 @@ const handleRemoverMeta = (id) => {
   );
 };
 
-
 // ========== ESTILOS ==========
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#F6F6F8' },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
   
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  exportButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, gap: 8 },
-  exportText: { fontSize: 14, fontWeight: '500', color: '#6366F1' },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  backIcon: { width: 16, height: 16, backgroundColor: '#475569' },
+  exportButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(179, 103, 212, 0.10)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, gap: 8 },
+  exportText: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '500', color: '#B367D4' },
   
   // Tabs
-  tabsContainer: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingHorizontal: 8 },
+  tabsContainer: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 8, marginTop: 8 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#6366F1' },
-  tabText: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
-  tabTextActive: { color: '#6366F1' },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#B367D4' },
+  tabText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#94A3B8' },
+  tabTextActive: { color: '#B367D4' },
   
   // Conteúdo
   abaContainer: { padding: 16 },
@@ -1097,144 +1098,144 @@ const styles = StyleSheet.create({
   // Cards do Perfil
   pacienteInfo: { paddingHorizontal: 20, paddingVertical: 16 },
   pacienteHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 },
-  pacienteNome: { fontSize: 28, fontWeight: 'bold', color: '#1F2937' },
-  idBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-  idText: { fontSize: 12, color: '#6B7280' },
-  pacienteIdade: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  pacienteNome: { fontSize: 28, fontFamily: 'Manrope', fontWeight: '700', color: '#0F172A' },
+  idBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  idText: { fontSize: 12, fontFamily: 'Manrope', color: '#64748B' },
+  pacienteIdade: { fontSize: 14, fontFamily: 'Manrope', color: '#64748B', marginTop: 4 },
   condicaoContainer: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  condicaoLabel: { fontSize: 12, fontWeight: '600', color: '#EF4444', letterSpacing: 0.5 },
-  condicaoValor: { fontSize: 16, fontWeight: '600', color: '#EF4444' },
+  condicaoLabel: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '700', color: '#EF4444', letterSpacing: 0.5 },
+  condicaoValor: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '600', color: '#EF4444' },
   
-  card: { backgroundColor: '#FFFFFF', marginHorizontal: 20, marginBottom: 16, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: '#FFFFFF', marginHorizontal: 20, marginBottom: 16, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1, borderWidth: 1, borderColor: '#F1F5F9' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 12 },
+  cardTitle: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A', marginBottom: 12 },
   
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
   statusEstavel: { backgroundColor: '#D1FAE5' },
   statusInstavel: { backgroundColor: '#FEF3C7' },
-  statusText: { fontSize: 14, fontWeight: '600' },
+  statusText: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '600' },
   statusTextEstavel: { color: '#10B981' },
   statusTextInstavel: { color: '#F59E0B' },
-  melhoraText: { fontSize: 14, color: '#10B981', fontWeight: '500' },
+  melhoraText: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '500', color: '#10B981' },
   
-  diagnosticoCodigo: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 8 },
-  diagnosticoDescricao: { fontSize: 14, color: '#6B7280', lineHeight: 20 },
-  resumoTexto: { fontSize: 14, color: '#4B5563', lineHeight: 20, marginBottom: 16 },
+  diagnosticoCodigo: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A', marginBottom: 8 },
+  diagnosticoDescricao: { fontSize: 14, fontFamily: 'Manrope', color: '#64748B', lineHeight: 20 },
+  resumoTexto: { fontSize: 14, fontFamily: 'Manrope', color: '#475569', lineHeight: 20, marginBottom: 16 },
   
   tagsContainer: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  tag: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
-  tagText: { fontSize: 12, fontWeight: '500', color: '#4B5563' },
+  tag: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
+  tagText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#475569' },
   
   smartwatchRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
   smartwatchItem: { alignItems: 'center', flex: 1 },
-  smartwatchDivider: { width: 1, height: 40, backgroundColor: '#E5E7EB' },
-  smartwatchValue: { fontSize: 24, fontWeight: 'bold', color: '#1F2937', marginTop: 8 },
-  smartwatchLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  smartwatchDivider: { width: 1, height: 40, backgroundColor: '#E2E8F0' },
+  smartwatchValue: { fontSize: 24, fontFamily: 'Manrope', fontWeight: '700', color: '#0F172A', marginTop: 8 },
+  smartwatchLabel: { fontSize: 12, fontFamily: 'Manrope', color: '#64748B', marginTop: 4 },
   
-  correlacaoSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 16 },
+  correlacaoSubtitle: { fontSize: 14, fontFamily: 'Manrope', color: '#64748B', marginBottom: 16 },
   chart: { marginLeft: -25, borderRadius: 16 },
   
   // Seção de Metas e Insights
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
-  sectionSubtitle: { fontSize: 12, color: '#9CA3AF' },
-  addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 4 },
-  addButtonText: { fontSize: 12, fontWeight: '500', color: '#6366F1' },
+  sectionTitle: { fontSize: 18, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A' },
+  sectionSubtitle: { fontSize: 12, fontFamily: 'Manrope', color: '#94A3B8' },
+  addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(179, 103, 212, 0.10)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 4 },
+  addButtonText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#B367D4' },
   
-  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '500', color: '#6B7280', marginTop: 12 },
-  emptySubtext: { fontSize: 12, color: '#9CA3AF', marginTop: 4 },
+  emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9' },
+  emptyText: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '500', color: '#64748B', marginTop: 12 },
+  emptySubtext: { fontSize: 12, fontFamily: 'Manrope', color: '#94A3B8', marginTop: 4 },
   
-  metaCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  metaCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F1F5F9' },
   metaHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   metaStatus: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 6 },
   metaStatusDot: { width: 8, height: 8, borderRadius: 4 },
-  metaStatusText: { fontSize: 11, fontWeight: '600' },
+  metaStatusText: { fontSize: 11, fontFamily: 'Manrope', fontWeight: '600' },
   metaActions: { flexDirection: 'row', gap: 12 },
-  metaTitulo: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 4 },
-  metaProgresso: { fontSize: 13, color: '#6B7280', marginBottom: 8 },
+  metaTitulo: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A', marginBottom: 4 },
+  metaProgresso: { fontSize: 13, fontFamily: 'Manrope', color: '#64748B', marginBottom: 8 },
   metaPrazo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaPrazoText: { fontSize: 11, color: '#9CA3AF' },
+  metaPrazoText: { fontSize: 11, fontFamily: 'Manrope', color: '#94A3B8' },
   
   insightCard: { backgroundColor: '#F8FAFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E0E7FF' },
   insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  insightData: { fontSize: 11, color: '#9CA3AF' },
-  insightTexto: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  insightData: { fontSize: 11, fontFamily: 'Manrope', color: '#94A3B8' },
+  insightTexto: { fontSize: 14, fontFamily: 'Manrope', color: '#334155', lineHeight: 20 },
   
-  lembreteCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  lembreteCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   lembreteHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  lembreteDia: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  lembreteDiaText: { fontSize: 12, fontWeight: '500', color: '#6366F1' },
+  lembreteDia: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(179, 103, 212, 0.10)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  lembreteDiaText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#B367D4' },
   enviadoBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, gap: 4 },
-  enviadoText: { fontSize: 10, fontWeight: '500', color: '#10B981' },
-  lembreteTexto: { fontSize: 14, color: '#1F2937', marginBottom: 12, lineHeight: 20 },
+  enviadoText: { fontSize: 10, fontFamily: 'Manrope', fontWeight: '500', color: '#10B981' },
+  lembreteTexto: { fontSize: 14, fontFamily: 'Manrope', color: '#0F172A', marginBottom: 12, lineHeight: 20 },
   lembreteActions: { flexDirection: 'row', gap: 12 },
-  enviarBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 6 },
-  enviarBtnText: { fontSize: 12, fontWeight: '500', color: '#6366F1' },
+  enviarBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(179, 103, 212, 0.10)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 6 },
+  enviarBtnText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#B367D4' },
   removerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEE2E2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 6 },
-  removerBtnText: { fontSize: 12, fontWeight: '500', color: '#EF4444' },
-  enviarTodosBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#6366F1', padding: 12, borderRadius: 12, gap: 8, marginTop: 8 },
-  enviarTodosBtnText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  removerBtnText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#EF4444' },
+  enviarTodosBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#B367D4', padding: 12, borderRadius: 12, gap: 8, marginTop: 8 },
+  enviarTodosBtnText: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '600', color: '#FFFFFF' },
   
   // Seção de Arquivos
-  arquivoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  arquivoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   arquivoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  arquivoIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  arquivoIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   arquivoInfo: { flex: 1 },
-  arquivoNome: { fontSize: 14, fontWeight: '500', color: '#1F2937', marginBottom: 4 },
-  arquivoMeta: { fontSize: 11, color: '#9CA3AF' },
-  arquivoActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  arquivoNome: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '500', color: '#0F172A', marginBottom: 4 },
+  arquivoMeta: { fontSize: 11, fontFamily: 'Manrope', color: '#94A3B8' },
+  arquivoActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
   analiseBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  analiseBtnText: { fontSize: 12, fontWeight: '500', color: '#6366F1' },
+  analiseBtnText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#B367D4' },
   downloadBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  downloadBtnText: { fontSize: 12, fontWeight: '500', color: '#10B981' },
+  downloadBtnText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#10B981' },
   
-  anotacaoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  anotacaoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   anotacaoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  anotacaoTitulo: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
-  anotacaoData: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  anotacaoTexto: { fontSize: 13, color: '#6B7280', lineHeight: 18, marginBottom: 12 },
+  anotacaoTitulo: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A' },
+  anotacaoData: { fontSize: 11, fontFamily: 'Manrope', color: '#94A3B8', marginTop: 2 },
+  anotacaoTexto: { fontSize: 13, fontFamily: 'Manrope', color: '#64748B', lineHeight: 18, marginBottom: 12 },
   
   // Modais
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContainer: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '90%', maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  modalTitle: { fontSize: 18, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A' },
   modalContent: { padding: 20 },
-  modalInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 16, backgroundColor: '#F9FAFB', minHeight: 50, textAlignVertical: 'top' },
+  modalInput: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 12, fontSize: 16, fontFamily: 'Manrope', backgroundColor: '#FFFFFF', minHeight: 50, textAlignVertical: 'top', color: '#0F172A' },
   textArea: { height: 120 },
-  inputLabel: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
-  modalButton: { backgroundColor: '#6366F1', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 24 },
-  modalButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  inputLabel: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '500', color: '#334155', marginBottom: 8 },
+  modalButton: { backgroundColor: '#B367D4', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 24 },
+  modalButtonText: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '600', color: '#FFFFFF' },
   
   diasContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  diaButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6' },
-  diaButtonActive: { backgroundColor: '#6366F1' },
-  diaButtonText: { fontSize: 12, fontWeight: '500', color: '#6B7280' },
+  diaButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F1F5F9' },
+  diaButtonActive: { backgroundColor: '#B367D4' },
+  diaButtonText: { fontSize: 12, fontFamily: 'Manrope', fontWeight: '500', color: '#64748B' },
   diaButtonTextActive: { color: '#FFFFFF' },
   
   // Modal de tipos de arquivo
-  tipoArquivoBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  tipoArquivoBtnText: { fontSize: 16, color: '#1F2937' },
+  tipoArquivoBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  tipoArquivoBtnText: { fontSize: 16, fontFamily: 'Manrope', color: '#0F172A' },
   
   // Modal de Análise
   analiseModalContainer: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '85%', maxHeight: '70%' },
-  analiseModalHeader: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', gap: 12 },
-  analiseIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
-  analiseModalTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: '#1F2937' },
+  analiseModalHeader: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', gap: 12 },
+  analiseIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(179, 103, 212, 0.10)', alignItems: 'center', justifyContent: 'center' },
+  analiseModalTitle: { flex: 1, fontSize: 18, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A' },
   analiseModalContent: { padding: 20 },
-  analiseItemTitle: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 12 },
-  analiseDivider: { height: 1, backgroundColor: '#E5E7EB', marginBottom: 16 },
-  analiseText: { fontSize: 14, color: '#4B5563', lineHeight: 22 },
-  analiseCloseButton: { backgroundColor: '#F3F4F6', margin: 20, padding: 12, borderRadius: 12, alignItems: 'center' },
-  analiseCloseButtonText: { fontSize: 14, fontWeight: '500', color: '#6B7280' },
+  analiseItemTitle: { fontSize: 16, fontFamily: 'Manrope', fontWeight: '600', color: '#0F172A', marginBottom: 12 },
+  analiseDivider: { height: 1, backgroundColor: '#E2E8F0', marginBottom: 16 },
+  analiseText: { fontSize: 14, fontFamily: 'Manrope', color: '#475569', lineHeight: 22 },
+  analiseCloseButton: { backgroundColor: '#F1F5F9', margin: 20, padding: 12, borderRadius: 12, alignItems: 'center' },
+  analiseCloseButtonText: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '500', color: '#64748B' },
   
-  analiseSection: { backgroundColor: '#F8FAFF', borderRadius: 16, padding: 16, marginTop: 20 },
+  analiseSection: { backgroundColor: 'rgba(179, 103, 212, 0.05)', borderRadius: 16, padding: 16, marginTop: 20 },
   analiseSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  analiseSectionTitle: { fontSize: 14, fontWeight: '600', color: '#6366F1' },
-  analiseSectionText: { fontSize: 13, color: '#4B5563', lineHeight: 20 },
-  anotacaoDataModal: { fontSize: 12, color: '#9CA3AF', marginBottom: 16 },
-  anotacaoTextoModal: { fontSize: 15, color: '#1F2937', lineHeight: 22 },
+  analiseSectionTitle: { fontSize: 14, fontFamily: 'Manrope', fontWeight: '600', color: '#B367D4' },
+  analiseSectionText: { fontSize: 13, fontFamily: 'Manrope', color: '#475569', lineHeight: 20 },
+  anotacaoDataModal: { fontSize: 12, fontFamily: 'Manrope', color: '#94A3B8', marginBottom: 16 },
+  anotacaoTextoModal: { fontSize: 15, fontFamily: 'Manrope', color: '#0F172A', lineHeight: 22 },
 });
 
 export default DashboardPaciente;
