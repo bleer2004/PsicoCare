@@ -22,7 +22,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'react-native-image-picker';
 
-  const Configuracoes = ({ navigation }) => {
+const Configuracoes = ({ navigation }) => {
   const [nome, setNome] = useState('');
   const [sobrenome, setSobrenome] = useState('');
   const [email, setEmail] = useState('');
@@ -78,66 +78,60 @@ import * as ImagePicker from 'react-native-image-picker';
     carregarDados();
   }, []);
 
- const carregarDados = async () => {
-  try {
-    setLoading(true);
-    const userStr = await AsyncStorage.getItem('user');
-    const token = await AsyncStorage.getItem('token');
-    
-    if (!userStr) return;
-    const user = JSON.parse(userStr);
-
-    setClinicianId(user.id); 
-
-    const response = await fetch(`${API_URL}/clinicians/${user.id}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    const result = await response.json();
-    console.log("Dados crus vindo da API:", result);
-
-    if (response.ok) {
-      // Como o log mostrou que os dados estão na raiz, pegamos direto do result
-      const d = result; 
-
-      // Atualiza os inputs da tela
-      const partes = (d.name || '').trim().split(' ');
-      setNome(partes[0] || '');
-      setSobrenome(partes.slice(1).join(' ') || '');
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      const userStr = await AsyncStorage.getItem('user');
+      const token = await AsyncStorage.getItem('token');
       
-      setEmail(d.email || '');
-      setTelefone(formatTelefone(d.phone || ''));
-      setCelular(formatTelefone(d.phone || ''));
-      setRegistroProfissional(d.councilId || '');
-      setProfissao(d.profession || '');
-      setEspecialidade(d.especialidade || '');
-      setClinica(d.clinica || '');
-      setEnderecoClinica(d.enderecoClinica || '');
-      
-      if (d.birthDate) {
-        setDataNascimento(formatDate(d.birthDate));
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+
+      setClinicianId(user.id); 
+
+      const response = await fetch(`${API_URL}/clinicians/${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const result = await response.json();
+      console.log("Dados crus vindo da API:", result);
+
+      if (response.ok) {
+        const d = result; 
+
+        const partes = (d.name || '').trim().split(' ');
+        setNome(partes[0] || '');
+        setSobrenome(partes.slice(1).join(' ') || '');
+        
+        setEmail(d.email || '');
+        setTelefone(formatTelefone(d.phone || ''));
+        setCelular(formatTelefone(d.phone || ''));
+        setRegistroProfissional(d.councilId || '');
+        setProfissao(d.profession || '');
+        setEspecialidade(d.especialidade || '');
+        setClinica(d.clinica || '');
+        setEnderecoClinica(d.enderecoClinica || '');
+        
+        if (d.birthDate) {
+          setDataNascimento(formatDate(d.birthDate));
+        }
       }
+    } catch (err) {
+      console.error("Erro ao carregar:", err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Erro ao carregar:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
- const formatDate = (dateString) => {
-  if (!dateString) return '';
-
-  const date = new Date(dateString);
-
-  if (isNaN(date)) return dateString;
-
-  const dia = String(date.getUTCDate()).padStart(2, '0');
-  const mes = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const ano = date.getUTCFullYear();
-
-  return `${dia}/${mes}/${ano}`;
-};
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date)) return dateString;
+    const dia = String(date.getUTCDate()).padStart(2, '0');
+    const mes = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const ano = date.getUTCFullYear();
+    return `${dia}/${mes}/${ano}`;
+  };
 
   const formatTelefone = (text) => {
     let cleaned = text.replace(/\D/g, '');
@@ -155,17 +149,15 @@ import * as ImagePicker from 'react-native-image-picker';
     return text;
   };
 
-const handleDateChange = (event, selectedDate) => {
-  setShowDatePicker(false);
-  if (selectedDate) {
-    // Para exibição no input (DD/MM/AAAA)
-    const dia = selectedDate.getDate().toString().padStart(2, '0');
-    const mes = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-    const ano = selectedDate.getFullYear();
-    
-    setDataNascimento(`${dia}/${mes}/${ano}`);
-  }
-};
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const dia = selectedDate.getDate().toString().padStart(2, '0');
+      const mes = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const ano = selectedDate.getFullYear();
+      setDataNascimento(`${dia}/${mes}/${ano}`);
+    }
+  };
 
   const handleEscolherImagem = () => {
     ImagePicker.launchImageLibrary({ mediaType: 'photo' }, (response) => {
@@ -175,157 +167,153 @@ const handleDateChange = (event, selectedDate) => {
     });
   };
 
- const formatDateToAPI = (dateBR) => {
-  if (!dateBR) return null;
+  const formatDateToAPI = (dateBR) => {
+    if (!dateBR) return null;
+    const [dia, mes, ano] = dateBR.split('/');
+    return `${ano}-${mes}-${dia}`; 
+  };
 
-  const [dia, mes, ano] = dateBR.split('/');
-  return `${ano}-${mes}-${dia}`; 
-};
+  const validarEmail = (email) => {
+    if (!email) return false;
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
 
-const validarEmail = (email) => {
-  if (!email) return false;
-
-  // regex simples e eficiente (não exagerada)
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  return regex.test(email);
-};
-
-const handleSalvarAlteracoes = async () => {
-  try {
-    
-    if (!validarEmail(email)) {
-      Alert.alert('Erro', 'Digite um e-mail válido (ex: nome@email.com)');
-      return;
-    }
-
-    setLoading(true);
-    const token = await AsyncStorage.getItem('token');
-
-    // --- 1. ATUALIZAR PERFIL (PUT) ---
-    const profileBody = {
-      name: `${nome} ${sobrenome}`.trim(),
-      email: email.trim(),
-      phone: telefone.replace(/\D/g, ''), 
-      cellphone: celular.replace(/\D/g, ''),       
-      councilId: registroProfissional,
-      profession: profissao,
-      birthDate: dataNascimento ? formatDateToAPI(dataNascimento) : null,
-      especialidade,
-      clinica,
-      enderecoClinica
-    };
-
-    const profileResponse = await fetch(`${API_URL}/clinicians/${clinicianId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(profileBody)
-    });
-
-    if (!profileResponse.ok) {
-      const errorData = await profileResponse.json();
-      throw new Error(errorData.error || 'Erro ao atualizar perfil');
-    }
-
-    // --- 2. ATUALIZAR SENHA (POST) - SÓ SE O USUÁRIO DIGITOU NOVA SENHA ---
-    if (novaSenha && novaSenha.trim().length > 0) {
-      if (!senhaAtual) {
-        Alert.alert('Atenção', 'Informe a senha atual para definir uma nova.');
-        setLoading(false);
+  const handleSalvarAlteracoes = async () => {
+    try {
+      if (!validarEmail(email)) {
+        Alert.alert('Erro', 'Digite um e-mail válido (ex: nome@email.com)');
         return;
       }
 
-      if (novaSenha !== confirmarSenha) {
-        Alert.alert('Erro', 'A nova senha e a confirmação não coincidem.');
-        setLoading(false);
-        return;
-      }
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
 
-      const passwordResponse = await fetch(`${API_URL}/clinicians/update-password`, {
-        method: 'POST',
+      const profileBody = {
+        name: `${nome} ${sobrenome}`.trim(),
+        email: email.trim(),
+        phone: telefone.replace(/\D/g, ''), 
+        cellphone: celular.replace(/\D/g, ''),       
+        councilId: registroProfissional,
+        profession: profissao,
+        birthDate: dataNascimento ? formatDateToAPI(dataNascimento) : null,
+        especialidade,
+        clinica,
+        enderecoClinica
+      };
+
+      const profileResponse = await fetch(`${API_URL}/clinicians/${clinicianId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          clinicianId: clinicianId,
-          currentPassword: senhaAtual.trim(), // Enviando sem espaços
-          newPassword: novaSenha.trim()
-        })
+        body: JSON.stringify(profileBody)
       });
 
-      if (!passwordResponse.ok) {
-        const passError = await passwordResponse.json();
-        throw new Error(passError.error || 'A senha atual está incorreta.');
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json();
+        throw new Error(errorData.error || 'Erro ao atualizar perfil');
       }
-    }
 
-    // --- 3. SUCESSO E ATUALIZAÇÃO LOCAL ---
-    Alert.alert('Sucesso', 'As alterações foram salvas!');
-    setEditMode(false);
-    // Dá um tempo para o Dynamo "respirar" antes de ler de novo
-    setTimeout(() => {
-      carregarDados();
-    }, 800);    
-    
-    const novoNomeCompleto = `${nome} ${sobrenome}`.trim();
+      if (novaSenha && novaSenha.trim().length > 0) {
+        if (!senhaAtual) {
+          Alert.alert('Atenção', 'Informe a senha atual para definir uma nova.');
+          setLoading(false);
+          return;
+        }
 
-      // 2. Atualize o AsyncStorage
+        if (novaSenha !== confirmarSenha) {
+          Alert.alert('Erro', 'A nova senha e a confirmação não coincidem.');
+          setLoading(false);
+          return;
+        }
+
+        const passwordResponse = await fetch(`${API_URL}/clinicians/update-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            clinicianId: clinicianId,
+            currentPassword: senhaAtual.trim(),
+            newPassword: novaSenha.trim()
+          })
+        });
+
+        if (!passwordResponse.ok) {
+          const passError = await passwordResponse.json();
+          throw new Error(passError.error || 'A senha atual está incorreta.');
+        }
+      }
+
+      Alert.alert('Sucesso', 'As alterações foram salvas!');
+      setEditMode(false);
+      
+      setTimeout(() => {
+        carregarDados();
+      }, 800);    
+      
+      const novoNomeCompleto = `${nome} ${sobrenome}`.trim();
       const userStr = await AsyncStorage.getItem('user');
       if (userStr) {
-          const userObj = JSON.parse(userStr);
-          const updatedUser = { 
-              ...userObj, 
-              email: email.trim(), 
-              name: novoNomeCompleto 
-          };
-          await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+        const userObj = JSON.parse(userStr);
+        const updatedUser = { 
+          ...userObj, 
+          email: email.trim(), 
+          name: novoNomeCompleto 
+        };
+        await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
       }
 
-      // 3. Limpeza e recarregamento
       setSenhaAtual('');
       setNovaSenha('');
       setConfirmarSenha('');
       setEditMode(false);
-
-      // IMPORTANTE: Dê um pequeno delay ou use o carregarDados para garantir o sincronismo
       await carregarDados();
 
-  } catch (err) {
-    Alert.alert('Erro', err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (err) {
+      Alert.alert('Erro', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getInitials = () => {
+    if (nome && sobrenome) {
+      return `${nome[0]}${sobrenome[0]}`.toUpperCase();
+    }
+    if (nome) return nome[0].toUpperCase();
+    return 'AB';
+  };
 
   const renderInfoRow = (label, value, icon, onEdit) => (
     <View style={styles.infoRow}>
       <View style={styles.infoLabelContainer}>
-        <Icon name={icon} size={20} color="#6366F1" />
+        <Icon name={icon} size={20} color="#B367D4" />
         <Text style={styles.infoLabel}>{label}</Text>
       </View>
       <View style={styles.infoValueContainer}>
         <Text style={styles.infoValue}>{value || 'Não informado'}</Text>
         {editMode && (
           <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-            <Icon name="edit-2" size={16} color="#6366F1" />
+            <Icon name="edit-2" size={16} color="#B367D4" />
           </TouchableOpacity>
         )}
       </View>
     </View>
   );
 
-  const renderInputField = (label, value, onChangeText, icon, keyboardType = 'default', placeholder = '', isPassword = false) => (    <View style={styles.inputContainer}>
+  const renderInputField = (label, value, onChangeText, icon, keyboardType = 'default', placeholder = '', isPassword = false) => (
+    <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
       <View style={styles.inputWrapper}>
-        <Icon name={icon} size={20} color="#9CA3AF" style={styles.inputIcon} />
+        <Icon name={icon} size={20} color="#94A3B8" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#94A3B8"
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
@@ -338,16 +326,13 @@ const handleSalvarAlteracoes = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.header}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
+
+      {/* Header com blur */}
+      <View style={styles.headerBlur}>
+        <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-left" size={24} color="#4B5563" />
+            <View style={styles.backIcon} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Configurações</Text>
           <TouchableOpacity 
@@ -355,20 +340,27 @@ const handleSalvarAlteracoes = async () => {
             style={styles.saveButton}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#6366F1" />
+              <ActivityIndicator size="small" color="#B367D4" />
             ) : (
               <Text style={styles.saveButtonText}>{editMode ? 'Salvar' : 'Editar'}</Text>
             )}
           </TouchableOpacity>
         </View>
-
+      </View>
+      
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Avatar Section */}
         <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={handleEscolherImagem} disabled={!editMode}>
+          <TouchableOpacity onPress={handleEscolherImagem} disabled={!editMode} style={styles.avatarWrapper}>
             {avatar ? (
               <Image source={{ uri: avatar }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>AB</Text>
+                <Text style={styles.avatarText}>{getInitials()}</Text>
               </View>
             )}
             {editMode && (
@@ -379,12 +371,16 @@ const handleSalvarAlteracoes = async () => {
           </TouchableOpacity>
           <Text style={styles.avatarName}>{nome} {sobrenome}</Text>
           <Text style={styles.avatarProfissao}>
-            {profissao === 'psicologo' ? 'Psicóloga' : 'Psiquiatra'} • {registroProfissional}
+            {profissao === 'psicologo' ? 'Psicólogo' : 'Psiquiatra'} • {registroProfissional || 'Cadastre seu registro'}
           </Text>
         </View>
 
+        {/* Informações Pessoais */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informações Pessoais</Text>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon} />
+            <Text style={styles.sectionTitle}>Informações Pessoais</Text>
+          </View>
           
           {editMode ? (
             <>
@@ -400,9 +396,11 @@ const handleSalvarAlteracoes = async () => {
                   style={styles.inputWrapper}
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <Icon name="calendar" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                  <Text style={styles.input}>{dataNascimento || 'DD/MM/AAAA'}</Text>
-                  <Icon name="chevron-right" size={20} color="#9CA3AF" />
+                  <Icon name="calendar" size={20} color="#94A3B8" style={styles.inputIcon} />
+                  <Text style={[styles.input, !dataNascimento && styles.placeholderText]}>
+                    {dataNascimento || 'DD/MM/AAAA'}
+                  </Text>
+                  <Icon name="chevron-right" size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
             </>
@@ -417,8 +415,12 @@ const handleSalvarAlteracoes = async () => {
           )}
         </View>
 
+        {/* Informações Profissionais */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informações Profissionais</Text>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconLarge} />
+            <Text style={styles.sectionTitle}>Informações Profissionais</Text>
+          </View>
           
           {editMode ? (
             <>
@@ -428,11 +430,11 @@ const handleSalvarAlteracoes = async () => {
                   style={styles.inputWrapper}
                   onPress={() => setShowProfissaoModal(true)}
                 >
-                  <Icon name="briefcase" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                  <Text style={styles.input}>
+                  <Icon name="briefcase" size={20} color="#94A3B8" style={styles.inputIcon} />
+                  <Text style={[styles.input, !profissao && styles.placeholderText]}>
                     {profissoes.find(p => p.value === profissao)?.label || 'Selecione'}
                   </Text>
-                  <Icon name="chevron-down" size={20} color="#9CA3AF" />
+                  <Icon name="chevron-down" size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
               
@@ -451,9 +453,11 @@ const handleSalvarAlteracoes = async () => {
                   style={styles.inputWrapper}
                   onPress={() => setShowEspecialidadeModal(true)}
                 >
-                  <Icon name="star" size={20} color="#9CA3AF" style={styles.inputIcon} />
-                  <Text style={styles.input}>{especialidade}</Text>
-                  <Icon name="chevron-down" size={20} color="#9CA3AF" />
+                  <Icon name="star" size={20} color="#94A3B8" style={styles.inputIcon} />
+                  <Text style={[styles.input, !especialidade && styles.placeholderText]}>
+                    {especialidade || 'Selecione'}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
               
@@ -471,12 +475,16 @@ const handleSalvarAlteracoes = async () => {
           )}
         </View>
 
+        {/* Preferências */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferências</Text>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconMedium} />
+            <Text style={styles.sectionTitle}>Preferências</Text>
+          </View>
           
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>
-              <Icon name="bell" size={20} color="#6366F1" />
+              <Icon name="bell" size={20} color="#B367D4" />
               <View style={styles.preferenceTextContainer}>
                 <Text style={styles.preferenceLabel}>Notificações</Text>
                 <Text style={styles.preferenceDescription}>Receber alertas de pacientes e atualizações</Text>
@@ -485,14 +493,14 @@ const handleSalvarAlteracoes = async () => {
             <Switch
               value={notificacoes}
               onValueChange={setNotificacoes}
-              trackColor={{ false: '#E5E7EB', true: '#6366F1' }}
+              trackColor={{ false: '#E2E8F0', true: '#B367D4' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>
-              <Icon name="mail" size={20} color="#6366F1" />
+              <Icon name="mail" size={20} color="#B367D4" />
               <View style={styles.preferenceTextContainer}>
                 <Text style={styles.preferenceLabel}>E-mails promocionais</Text>
                 <Text style={styles.preferenceDescription}>Receber novidades e ofertas exclusivas</Text>
@@ -501,14 +509,14 @@ const handleSalvarAlteracoes = async () => {
             <Switch
               value={emailPromocoes}
               onValueChange={setEmailPromocoes}
-              trackColor={{ false: '#E5E7EB', true: '#6366F1' }}
+              trackColor={{ false: '#E2E8F0', true: '#B367D4' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>
-              <Icon name="fingerprint" size={20} color="#6366F1" />
+              <Icon name="fingerprint" size={20} color="#B367D4" />
               <View style={styles.preferenceTextContainer}>
                 <Text style={styles.preferenceLabel}>Login com Biometria</Text>
                 <Text style={styles.preferenceDescription}>Acessar usando impressão digital</Text>
@@ -517,14 +525,14 @@ const handleSalvarAlteracoes = async () => {
             <Switch
               value={biometria}
               onValueChange={setBiometria}
-              trackColor={{ false: '#E5E7EB', true: '#6366F1' }}
+              trackColor={{ false: '#E2E8F0', true: '#B367D4' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>
-              <Icon name="moon" size={20} color="#6366F1" />
+              <Icon name="moon" size={20} color="#B367D4" />
               <View style={styles.preferenceTextContainer}>
                 <Text style={styles.preferenceLabel}>Tema escuro</Text>
                 <Text style={styles.preferenceDescription}>Alterar para o tema escuro</Text>
@@ -533,23 +541,27 @@ const handleSalvarAlteracoes = async () => {
             <Switch
               value={temaEscuro}
               onValueChange={setTemaEscuro}
-              trackColor={{ false: '#E5E7EB', true: '#6366F1' }}
+              trackColor={{ false: '#E2E8F0', true: '#B367D4' }}
               thumbColor="#FFFFFF"
             />
           </View>
         </View>
 
-       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Segurança</Text>
-        
-        {renderInputField('Senha atual', senhaAtual, setSenhaAtual, 'lock', 'default', 'Digite sua senha atual', true)}
-        {renderInputField('Nova senha', novaSenha, setNovaSenha, 'lock', 'default', 'Digite sua nova senha', true)}
-        {renderInputField('Confirmar senha', confirmarSenha, setConfirmarSenha, 'lock', 'default', 'Confirme sua nova senha', true)}
-      </View>
+        {/* Segurança */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconTall} />
+            <Text style={styles.sectionTitle}>Segurança</Text>
+          </View>
+          
+          {renderInputField('Senha atual', senhaAtual, setSenhaAtual, 'lock', 'default', 'Digite sua senha atual', true)}
+          {renderInputField('Nova senha', novaSenha, setNovaSenha, 'lock', 'default', 'Digite sua nova senha', true)}
+          {renderInputField('Confirmar senha', confirmarSenha, setConfirmarSenha, 'lock', 'default', 'Confirme sua nova senha', true)}
+        </View>
 
         {/* Ações da Conta */}
         <View style={styles.actionsSection}>
-         <TouchableOpacity 
+          <TouchableOpacity 
             style={styles.logoutButton}
             onPress={async () => {
               await AsyncStorage.clear();
@@ -589,7 +601,7 @@ const handleSalvarAlteracoes = async () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Selecione sua profissão</Text>
               <TouchableOpacity onPress={() => setShowProfissaoModal(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             {profissoes.map((item) => (
@@ -603,7 +615,7 @@ const handleSalvarAlteracoes = async () => {
               >
                 <Text style={styles.modalItemText}>{item.label}</Text>
                 {profissao === item.value && (
-                  <Icon name="check" size={20} color="#6366F1" />
+                  <Icon name="check" size={20} color="#B367D4" />
                 )}
               </TouchableOpacity>
             ))}
@@ -626,7 +638,7 @@ const handleSalvarAlteracoes = async () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Selecione sua especialidade</Text>
               <TouchableOpacity onPress={() => setShowEspecialidadeModal(false)}>
-                <Icon name="x" size={24} color="#6B7280" />
+                <Icon name="x" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
             {especialidades.map((item) => (
@@ -640,7 +652,7 @@ const handleSalvarAlteracoes = async () => {
               >
                 <Text style={styles.modalItemText}>{item}</Text>
                 {especialidade === item && (
-                  <Icon name="check" size={20} color="#6366F1" />
+                  <Icon name="check" size={20} color="#B367D4" />
                 )}
               </TouchableOpacity>
             ))}
@@ -664,7 +676,7 @@ const handleSalvarAlteracoes = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F6F6F8',
   },
   scrollView: {
     flex: 1,
@@ -672,65 +684,86 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 32,
   },
-  header: {
+  // Header com blur
+  headerBlur: {
+    backgroundColor: 'rgba(246, 246, 248, 0.80)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backIcon: {
+    width: 16,
+    height: 16,
+    backgroundColor: '#475569',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    color: '#0F172A',
+    fontSize: 20,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    lineHeight: 28,
   },
   saveButton: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6366F1',
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#B367D4',
   },
+  // Avatar Section
   avatarSection: {
     alignItems: 'center',
     paddingVertical: 24,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E2E8F0',
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 12,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 12,
   },
   avatarPlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#6366F1',
+    backgroundColor: 'rgba(179, 103, 212, 0.10)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(179, 103, 212, 0.10)',
   },
   avatarText: {
     fontSize: 36,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#B367D4',
   },
   editAvatarButton: {
     position: 'absolute',
-    bottom: 12,
+    bottom: 0,
     right: 0,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#B367D4',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -741,14 +774,18 @@ const styles = StyleSheet.create({
   },
   avatarName: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: 4,
   },
   avatarProfissao: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#64748B',
   },
+  // Sections
   section: {
     backgroundColor: '#FFFFFF',
     marginTop: 16,
@@ -756,21 +793,48 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#E2E8F0',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  sectionIcon: {
+    width: 16,
+    height: 16,
+    backgroundColor: '#B367D4',
+  },
+  sectionIconLarge: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#B367D4',
+  },
+  sectionIconMedium: {
+    width: 18,
+    height: 18,
+    backgroundColor: '#B367D4',
+  },
+  sectionIconTall: {
+    width: 16,
+    height: 20,
+    backgroundColor: '#B367D4',
   },
   sectionTitle: {
     fontSize: 16,
+    fontFamily: 'Manrope',
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
+    color: '#0F172A',
   },
+  // Info Row
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F1F5F9',
   },
   infoLabelContainer: {
     flexDirection: 'row',
@@ -779,7 +843,9 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#64748B',
   },
   infoValueContainer: {
     flexDirection: 'row',
@@ -788,47 +854,58 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 14,
-    color: '#1F2937',
+    fontFamily: 'Manrope',
     fontWeight: '500',
+    color: '#0F172A',
   },
   editButton: {
     padding: 4,
   },
+  // Input Fields
   inputContainer: {
     marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
+    fontFamily: 'Manrope',
     fontWeight: '500',
-    color: '#374151',
+    color: '#334155',
     marginBottom: 8,
+    paddingLeft: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 56,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#1F2937',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#0F172A',
     paddingVertical: 14,
     paddingHorizontal: 0,
   },
+  placeholderText: {
+    color: '#94A3B8',
+  },
+  // Preference Items
   preferenceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F1F5F9',
   },
   preferenceInfo: {
     flexDirection: 'row',
@@ -841,14 +918,18 @@ const styles = StyleSheet.create({
   },
   preferenceLabel: {
     fontSize: 14,
+    fontFamily: 'Manrope',
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#0F172A',
     marginBottom: 2,
   },
   preferenceDescription: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#64748B',
   },
+  // Actions
   actionsSection: {
     marginTop: 24,
     marginHorizontal: 20,
@@ -865,7 +946,8 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Manrope',
+    fontWeight: '600',
     color: '#EF4444',
   },
   deleteButton: {
@@ -873,14 +955,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F1F5F9',
     paddingVertical: 14,
     borderRadius: 12,
   },
   deleteText: {
     fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
     color: '#EF4444',
   },
+  // Version
   versionContainer: {
     alignItems: 'center',
     marginTop: 24,
@@ -888,13 +973,18 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#94A3B8',
     marginBottom: 4,
   },
   copyrightText: {
     fontSize: 10,
-    color: '#D1D5DB',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#CBD5E1',
   },
+  // Modals
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -912,12 +1002,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#E2E8F0',
   },
   modalTitle: {
     fontSize: 18,
+    fontFamily: 'Manrope',
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#0F172A',
   },
   modalItem: {
     flexDirection: 'row',
@@ -925,11 +1016,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F1F5F9',
   },
   modalItemText: {
     fontSize: 16,
-    color: '#1F2937',
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#0F172A',
   },
 });
 
