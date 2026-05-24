@@ -179,7 +179,7 @@ const Relatorios = ({ navigation }) => {
 ${relatorio.analiseIA}
 
 ---
-Relatório gerado por PsicoCare - Plataforma de Saúde Mental
+Relatório gerado por ApsiCare - Plataforma de Saúde Mental
 `;
       } else {
         conteudoTexto = `
@@ -194,7 +194,7 @@ ${relatorio.conteudo}
 ${relatorio.analiseIA}
 
 ---
-Relatório gerado por PsicoCare - Plataforma de Saúde Mental
+Relatório gerado por ApsiCare - Plataforma de Saúde Mental
 `;
       }
       
@@ -229,7 +229,7 @@ Relatório gerado por PsicoCare - Plataforma de Saúde Mental
       return;
     }
     
-    let textoExportacao = '📊 RELATÓRIOS PSICOCARE 📊\n';
+    let textoExportacao = '📊 RELATÓRIOS APSICARE 📊\n';
     textoExportacao += `Data de geração: ${new Date().toLocaleDateString('pt-BR')}\n`;
     textoExportacao += `Total de relatórios: ${relatoriosFiltrados.length}\n`;
     textoExportacao += '='.repeat(50) + '\n\n';
@@ -247,7 +247,7 @@ Relatório gerado por PsicoCare - Plataforma de Saúde Mental
     try {
       await Share.share({
         message: textoExportacao,
-        title: 'Relatorios_PsicoCare.txt',
+        title: 'Relatorios_ApsiCare.txt',
       });
       Alert.alert('Sucesso', 'Relatórios exportados com sucesso!');
     } catch (error) {

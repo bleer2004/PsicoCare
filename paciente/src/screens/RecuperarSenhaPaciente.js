@@ -357,7 +357,7 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
                 <Icon name="heart" size={24} color="#B367D4" />
               </View>
             </View>
-            <Text style={styles.title}>PsicoCare</Text>
+            <Text style={styles.title}>ApsiCare</Text>
             <Text style={styles.subtitle}>
               Plataforma clínica de saúde mental.
             </Text>

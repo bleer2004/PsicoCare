@@ -26,7 +26,7 @@ const HomePaciente = ({ navigation }) => {
   ];
 
   const [notificacoes, setNotificacoes] = useState([
-    { id: '1', titulo: 'Bem-vindo ao PsicoCare!', mensagem: 'Registre seu humor diariamente para acompanhar seu progresso.', data: 'Hoje', lida: false, icon: 'heart' },
+    { id: '1', titulo: 'Bem-vindo ao ApsiCare!', mensagem: 'Registre seu humor diariamente para acompanhar seu progresso.', data: 'Hoje', lida: false, icon: 'heart' },
   ]);
 
   useEffect(() => {

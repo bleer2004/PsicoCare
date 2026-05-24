@@ -581,7 +581,7 @@ const Configuracoes = ({ navigation }) => {
         {/* Versão do App */}
         <View style={styles.versionContainer}>
           <Text style={styles.versionText}>Versão 1.0.0</Text>
-          <Text style={styles.copyrightText}>© 2024 PsicoCare - Todos os direitos reservados</Text>
+          <Text style={styles.copyrightText}>© 2026 ApsiCare - Todos os direitos reservados</Text>
         </View>
       </ScrollView>
 
