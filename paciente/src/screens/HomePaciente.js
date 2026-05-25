@@ -22,7 +22,7 @@ const HomePaciente = ({ navigation }) => {
     { id: 'calmo', label: 'Calmo', color: '#E0F2F1', iconColor: '#0D9488', icon: 'wind', valence: 7, arousal: 3 },
     { id: 'ansioso', label: 'Ansioso', color: '#F3E5F5', iconColor: '#9333EA', icon: 'zap', valence: 3, arousal: 8 },
     { id: 'triste', label: 'Triste', color: '#FCE4EC', iconColor: '#DB2777', icon: 'frown', valence: 2, arousal: 2 },
-    { id: 'neutral', label: 'Neutral', color: '#F1F5F9', iconColor: '#64748B', icon: 'meh', valence: 5, arousal: 5 },
+    { id: 'neutro', label: 'Neutro', color: '#F1F5F9', iconColor: '#64748B', icon: 'meh', valence: 5, arousal: 5 },
   ];
 
   const [notificacoes, setNotificacoes] = useState([

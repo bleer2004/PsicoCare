@@ -77,8 +77,8 @@ const DiarioPaciente = ({ navigation }) => {
           .filter(m => m.diaryText || m.dreamText)
           .map((m, i) => ({
             id: String(i),
-            humor: m.contextTags?.[0] || 'neutral',
-            titulo: `Se sentindo ${m.contextTags?.[0] || 'neutral'}`,
+            humor: m.contextTags?.[0] || 'neutro',
+            titulo: `Se sentindo ${m.contextTags?.[0] || 'neutro'}`,
             texto: m.diaryText || '',
             sonhos: m.dreamText || '',
             humorNota: m.moodScore || 5,
