@@ -19,12 +19,26 @@ const DiarioPaciente = ({ navigation }) => {
   const [sharingId, setSharingId] = useState(null);
   const [anotacoes, setAnotacoes] = useState([]);
 
+  // NOVOS ESTADOS
+  const [humorNota, setHumorNota] = useState(5);
+  const [impactoNota, setImpactoNota] = useState(3);
+  const [contexto, setContexto] = useState('');
+
+  const contextos = [
+    { id: 'estudando', label: '📚 Estudando', icon: 'book' },
+    { id: 'trabalhando', label: '💼 Trabalhando', icon: 'briefcase' },
+    { id: 'deslocando', label: '🚗 Me deslocando', icon: 'navigation' },
+    { id: 'socializando', label: '👥 Socializando', icon: 'users' },
+    { id: 'descansando', label: '😌 Descansando', icon: 'coffee' },
+    { id: 'exercicio', label: '🏃 Praticando exercício', icon: 'activity' },
+  ];
+
   const moods = [
     { id: 'feliz', label: 'Feliz', color: '#E3F2FD', iconColor: '#2563EB', emoji: '😃', valence: 8, arousal: 7 },
     { id: 'calmo', label: 'Calmo', color: '#E0F2F1', iconColor: '#0D9488', emoji: '😌', valence: 7, arousal: 3 },
     { id: 'ansioso', label: 'Ansioso', color: '#F3E5F5', iconColor: '#9333EA', emoji: '😰', valence: 3, arousal: 8 },
     { id: 'triste', label: 'Triste', color: '#FCE4EC', iconColor: '#DB2777', emoji: '😢', valence: 2, arousal: 2 },
-    { id: 'neutral', label: 'Neutral', color: '#F1F5F9', iconColor: '#64748B', emoji: '😐', valence: 5, arousal: 5 },
+    { id: 'neutral', label: 'Neutro', color: '#F1F5F9', iconColor: '#64748B', emoji: '😐', valence: 5, arousal: 5 },
   ];
 
   useEffect(() => {
@@ -67,6 +81,9 @@ const DiarioPaciente = ({ navigation }) => {
             titulo: `Se sentindo ${m.contextTags?.[0] || 'neutral'}`,
             texto: m.diaryText || '',
             sonhos: m.dreamText || '',
+            humorNota: m.moodScore || 5,
+            impactoNota: m.impactScore || 3,
+            contexto: m.context || '',
             data: new Date(m.timestamp).toLocaleDateString('pt-BR'),
             shared: m.sharedWithPsychologist || false,
             moodId: m.id,
@@ -79,6 +96,10 @@ const DiarioPaciente = ({ navigation }) => {
   };
 
   const getMoodEmoji = (moodId) => moods.find(m => m.id === moodId)?.emoji || '😐';
+  const getContextoLabel = (contextoId) => {
+    const ctx = contextos.find(c => c.id === contextoId);
+    return ctx ? ctx.label : contextoId;
+  };
 
   const handleSalvar = async () => {
     if (!selectedMood) {
@@ -106,6 +127,9 @@ const DiarioPaciente = ({ navigation }) => {
           contextTags: [selectedMood],
           diaryText: anotacao,
           dreamText: sonhos,
+          moodScore: humorNota,
+          impactScore: impactoNota,
+          context: contexto,
         })
       });
 
@@ -113,7 +137,56 @@ const DiarioPaciente = ({ navigation }) => {
         setSelectedMood(null);
         setAnotacao('');
         setSonhos('');
+        setHumorNota(5);
+        setImpactoNota(3);
+        setContexto('');
         Alert.alert('Sucesso', 'Anotação salva com sucesso!');
+        await carregarHistorico();
+      }
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível salvar a anotação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSalvarComPartilha = async () => {
+    if (!selectedMood) {
+      Alert.alert('Atenção', 'Selecione como você está se sentindo');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const mood = moods.find(m => m.id === selectedMood);
+
+      const response = await fetch(`${API_URL}/patients/${user.id}/moods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          valenceScore: mood.valence,
+          arousalScore: mood.arousal,
+          contextTags: [selectedMood],
+          diaryText: anotacao,
+          dreamText: sonhos,
+          moodScore: humorNota,
+          impactScore: impactoNota,
+          context: contexto,
+          sharedWithPsychologist: true,
+        })
+      });
+
+      if (response.ok) {
+        setSelectedMood(null);
+        setAnotacao('');
+        setSonhos('');
+        setHumorNota(5);
+        setImpactoNota(3);
+        setContexto('');
+        Alert.alert('Sucesso', 'Anotação salva e compartilhada com seu psicólogo!');
         await carregarHistorico();
       }
     } catch (err) {
@@ -176,46 +249,6 @@ const DiarioPaciente = ({ navigation }) => {
     );
   };
 
-  const handleSalvarComPartilha = async () => {
-    if (!selectedMood) {
-      Alert.alert('Atenção', 'Selecione como você está se sentindo');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const userStr = await AsyncStorage.getItem('user');
-      const user = JSON.parse(userStr);
-      const mood = moods.find(m => m.id === selectedMood);
-
-      const response = await fetch(`${API_URL}/patients/${user.id}/moods`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          valenceScore: mood.valence,
-          arousalScore: mood.arousal,
-          contextTags: [selectedMood],
-          diaryText: anotacao,
-          dreamText: sonhos,
-          sharedWithPsychologist: true,
-        })
-      });
-
-      if (response.ok) {
-        setSelectedMood(null);
-        setAnotacao('');
-        setSonhos('');
-        Alert.alert('Sucesso', 'Anotação salva e compartilhada com seu psicólogo!');
-        await carregarHistorico();
-      }
-    } catch (err) {
-      Alert.alert('Erro', 'Não foi possível salvar a anotação');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const renderBreathingModal = () => (
     <Modal
       animationType="fade"
@@ -258,7 +291,6 @@ const DiarioPaciente = ({ navigation }) => {
           <View style={styles.headerPlaceholder} />
         </View>
 
-        {/* Seção de Humor */}
         <View style={styles.moodSection}>
           <Text style={styles.moodTitle}>Como você está se sentindo hoje?</Text>
           <View style={styles.moodContainer}>
@@ -277,7 +309,75 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Seção de Anotação Diária */}
+-        <View style={styles.ratingSection}>
+          <Text style={styles.ratingTitle}>Qual foi seu nível de humor hoje?</Text>
+          <Text style={styles.ratingSubtitle}>1 = Muito mal | 10 = Muito bem</Text>
+          <View style={styles.ratingContainer}>
+            <Text style={styles.ratingMin}>1</Text>
+            <View style={styles.ratingSlider}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.ratingDot,
+                    humorNota >= num && styles.ratingDotActive,
+                  ]}
+                  onPress={() => setHumorNota(num)}
+                >
+                  <Text style={[
+                    styles.ratingDotText,
+                    humorNota >= num && styles.ratingDotTextActive
+                  ]}>{num}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.ratingMax}>10</Text>
+          </View>
+        </View>
+
+        <View style={styles.ratingSection}>
+          <Text style={styles.ratingTitle}>O quanto isso impactou no seu dia?</Text>
+          <Text style={styles.ratingSubtitle}>1 = Pouco impacto | 5 = Muito impacto</Text>
+          <View style={styles.impactContainer}>
+            {[1, 2, 3, 4, 5].map((num) => (
+              <TouchableOpacity
+                key={num}
+                style={[
+                  styles.impactButton,
+                  impactoNota === num && styles.impactButtonActive,
+                ]}
+                onPress={() => setImpactoNota(num)}
+              >
+                <Text style={[
+                  styles.impactButtonText,
+                  impactoNota === num && styles.impactButtonTextActive
+                ]}>{num}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.contextSection}>
+          <Text style={styles.contextTitle}>Em que contexto você estava?</Text>
+          <View style={styles.contextContainer}>
+            {contextos.map((ctx) => (
+              <TouchableOpacity
+                key={ctx.id}
+                style={[
+                  styles.contextButton,
+                  contexto === ctx.id && styles.contextButtonActive,
+                ]}
+                onPress={() => setContexto(ctx.id)}
+              >
+                <Icon name={ctx.icon} size={18} color={contexto === ctx.id ? '#FFFFFF' : '#64748B'} />
+                <Text style={[
+                  styles.contextButtonText,
+                  contexto === ctx.id && styles.contextButtonTextActive
+                ]}>{ctx.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
         <View style={styles.anotacaoSection}>
           <View style={styles.sectionLabelContainer}>
             <Icon name="edit-2" size={16} color="#B367D4" />
@@ -371,7 +471,23 @@ const DiarioPaciente = ({ navigation }) => {
                   )}
                 </View>
                 
-                {/* Anotações diárias */}
+                <View style={styles.cardBadges}>
+                  <View style={styles.cardBadge}>
+                    <Icon name="star" size={10} color="#F59E0B" />
+                    <Text style={styles.cardBadgeText}>Humor: {item.humorNota || 5}/10</Text>
+                  </View>
+                  <View style={styles.cardBadge}>
+                    <Icon name="activity" size={10} color="#10B981" />
+                    <Text style={styles.cardBadgeText}>Impacto: {item.impactoNota || 3}/5</Text>
+                  </View>
+                  {item.contexto && (
+                    <View style={styles.cardBadge}>
+                      <Icon name="map-pin" size={10} color="#3B82F6" />
+                      <Text style={styles.cardBadgeText}>{getContextoLabel(item.contexto)}</Text>
+                    </View>
+                  )}
+                </View>
+                
                 {item.texto && (
                   <Text style={styles.cardText} numberOfLines={2}>{item.texto}</Text>
                 )}
@@ -391,7 +507,6 @@ const DiarioPaciente = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Modal de Detalhes da Anotação */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -408,6 +523,24 @@ const DiarioPaciente = ({ navigation }) => {
                   <Text style={styles.modalMoodText}>{selectedAnotacao.titulo}</Text>
                 </View>
                 <Text style={styles.modalDate}>{selectedAnotacao.data}</Text>
+                
+                {/* Notas no modal */}
+                <View style={styles.modalBadges}>
+                  <View style={styles.modalBadge}>
+                    <Text style={styles.modalBadgeLabel}>😊 Humor</Text>
+                    <Text style={styles.modalBadgeValue}>{selectedAnotacao.humorNota || 5}/10</Text>
+                  </View>
+                  <View style={styles.modalBadge}>
+                    <Text style={styles.modalBadgeLabel}>⚡ Impacto</Text>
+                    <Text style={styles.modalBadgeValue}>{selectedAnotacao.impactoNota || 3}/5</Text>
+                  </View>
+                  {selectedAnotacao.contexto && (
+                    <View style={styles.modalBadge}>
+                      <Text style={styles.modalBadgeLabel}>📍 Contexto</Text>
+                      <Text style={styles.modalBadgeValue}>{getContextoLabel(selectedAnotacao.contexto)}</Text>
+                    </View>
+                  )}
+                </View>
                 
                 {selectedAnotacao.texto && (
                   <>
@@ -553,6 +686,183 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#475569',
     lineHeight: 16,
+  },
+  // NOVOS ESTILOS
+  ratingSection: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  ratingTitle: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#0F172A',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  ratingSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#64748B',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingMin: {
+    fontSize: 12,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#64748B',
+    width: 20,
+  },
+  ratingMax: {
+    fontSize: 12,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#64748B',
+    width: 20,
+    textAlign: 'right',
+  },
+  ratingSlider: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingDot: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  ratingDotActive: {
+    backgroundColor: '#B367D4',
+  },
+  ratingDotText: {
+    fontSize: 12,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  ratingDotTextActive: {
+    color: '#FFFFFF',
+  },
+  impactContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  impactButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+  },
+  impactButtonActive: {
+    backgroundColor: '#10B981',
+  },
+  impactButtonText: {
+    fontSize: 18,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  impactButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  contextSection: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  contextTitle: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#0F172A',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  contextContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  contextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  contextButtonActive: {
+    backgroundColor: '#B367D4',
+    borderColor: '#B367D4',
+  },
+  contextButtonText: {
+    fontSize: 13,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  contextButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  cardBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  cardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  cardBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  modalBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalBadge: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  modalBadgeLabel: {
+    fontSize: 10,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  modalBadgeValue: {
+    fontSize: 16,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#0F172A',
   },
   sectionLabelContainer: {
     flexDirection: 'row',
@@ -743,7 +1053,6 @@ const styles = StyleSheet.create({
     color: '#475569',
     lineHeight: 20,
   },
-  // ESTILOS DOS SONHOS - AZUL MAIS CLARO
   dreamsPreview: {
     flexDirection: 'row',
     alignItems: 'center',
