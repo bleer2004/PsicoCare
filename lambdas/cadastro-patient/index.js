@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const client = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(client);
-const TABLE_NAME = "PsicoCare";
+const TABLE_NAME = "ApsiCare";
 
 export const handler = async (event) => {
   try {
@@ -17,55 +17,42 @@ export const handler = async (event) => {
       return response(400, { error: "Campos obrigatórios: name, email" });
     }
 
-    // Verifica se o psicólogo existe
     const clinician = await dynamo.send(new GetCommand({
       TableName: TABLE_NAME,
-      Key: {
-        PK: `CLINICIAN#${clinicianId}`,
-        SK: "PROFILE"
-      }
+      Key: { PK: `CLINICIAN#${clinicianId}`, SK: "PROFILE" }
     }));
 
     if (!clinician.Item) {
       return response(404, { error: "Psicólogo não encontrado" });
     }
 
-    // Verifica se email já existe como PACIENTE
     const existing = await dynamo.send(new QueryCommand({
       TableName: TABLE_NAME,
       IndexName: "GSI1PK-GSI1SK-index",
       KeyConditionExpression: "GSI1PK = :email",
-      ExpressionAttributeValues: {
-        ":email": `EMAIL#${email}`
-      }
+      ExpressionAttributeValues: { ":email": `EMAIL#${email.trim().toLowerCase()}` }
     }));
 
-    if (existing.Items.length > 0) {
-      const jaExisteComoPatient = existing.Items.some(
-        item => item.PK.startsWith("PATIENT#") || item.type === "PATIENT"
-      );
-
-      if (jaExisteComoPatient) {
-        return response(409, { error: "Email já cadastrado como paciente" });
-      }
+    // Só bloqueia se já existir como PATIENT
+    const jaExisteComoPatient = existing.Items?.some(item => item.PK.startsWith("PATIENT#"));
+    if (jaExisteComoPatient) {
+      return response(409, { error: "Email já cadastrado como paciente" });
     }
 
-    // Gera senha temporária
     const tempPassword = Math.random().toString(36).slice(-8);
-    const passwordHash = await bcrypt.hash(tempPassword, 12);
+    const passwordHash = await bcrypt.hash(tempPassword, 8); // cost 8 — sem timeout
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    // Registro principal do paciente
     const patientItem = {
       PK: `PATIENT#${id}`,
       SK: `PATIENT#${id}`,
-      GSI1PK: `EMAIL#${email}`,
+      GSI1PK: `EMAIL#${email.trim().toLowerCase()}`,
       GSI1SK: `PATIENT#${id}`,
       type: "PATIENT",
       clinicianId,
       name,
-      email,
+      email: email.trim().toLowerCase(),
       phone: phone || null,
       birthDate: birthDate || null,
       passwordHash,
@@ -80,14 +67,13 @@ export const handler = async (event) => {
       createdAt: now,
     };
 
-    // Vínculo com o psicólogo
     const linkItem = {
       PK: `CLINICIAN#${clinicianId}`,
       SK: `PATIENT#${id}`,
       type: "PATIENT_LINK",
       patientId: id,
       name,
-      email,
+      email: email.trim().toLowerCase(),
       phone: phone || null,
       birthDate: birthDate || null,
       diagnostico: diagnostico || null,
@@ -99,15 +85,7 @@ export const handler = async (event) => {
     await dynamo.send(new PutCommand({ TableName: TABLE_NAME, Item: patientItem }));
     await dynamo.send(new PutCommand({ TableName: TABLE_NAME, Item: linkItem }));
 
-    return response(201, {
-      patient: {
-        id,
-        name,
-        email,
-        diagnostico: diagnostico || null,
-        createdAt: now,
-      }
-    });
+    return response(201, { patient: { id, name, email, diagnostico: diagnostico || null, createdAt: now } });
 
   } catch (err) {
     console.error(err);
@@ -117,9 +95,6 @@ export const handler = async (event) => {
 
 const response = (statusCode, body) => ({
   statusCode,
-  headers: {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*"
-  },
+  headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
   body: JSON.stringify(body)
 });

@@ -374,7 +374,7 @@ const Cadastro = ({ navigation }) => {
       {showDatePicker && (
         <Modal transparent animationType="slide">
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-            <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40 }}>
+            <View style={{ backgroundColor: "#1E293B", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
                   <Text style={{ color: '#64748B', fontSize: 16 }}>Cancelar</Text>

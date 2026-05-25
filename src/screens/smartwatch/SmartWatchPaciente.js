@@ -15,9 +15,6 @@ const SmartwatchPaciente = ({ paciente, standalone = false }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [dadosSmartwatch, setDadosSmartwatch] = useState({
     batimentos: '--',
-    qualidadeSono: '--',
-    passos: '--',
-    calorias: '--',
     nivelStress: '--',
     ultimaSincronizacao: null,
   });
@@ -25,7 +22,7 @@ const SmartwatchPaciente = ({ paciente, standalone = false }) => {
   const handleConectar = () => {
     Alert.alert(
       'Conectar Smartwatch',
-      'Para conectar seu dispositivo wearable, siga os passos:\n\n1. Abra o app do seu smartwatch\n2. Ative o Bluetooth\n3. Autorize a conexão com o PsicoCare\n\nDeseja tentar conectar agora?',
+      'Para conectar seu dispositivo wearable, siga os passos:\n\n1. Abra o app do seu smartwatch\n2. Ative o Bluetooth\n3. Autorize a conexão com o ApsiCare\n\nDeseja tentar conectar agora?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
@@ -37,9 +34,6 @@ const SmartwatchPaciente = ({ paciente, standalone = false }) => {
               setConectado(true);
               setDadosSmartwatch({
                 batimentos: '72',
-                qualidadeSono: '84',
-                passos: '8.432',
-                calorias: '342',
                 nivelStress: 'Baixo',
                 ultimaSincronizacao: new Date().toLocaleString(),
               });
@@ -64,9 +58,6 @@ const SmartwatchPaciente = ({ paciente, standalone = false }) => {
             setConectado(false);
             setDadosSmartwatch({
               batimentos: '--',
-              qualidadeSono: '--',
-              passos: '--',
-              calorias: '--',
               nivelStress: '--',
               ultimaSincronizacao: null,
             });
@@ -87,9 +78,6 @@ const SmartwatchPaciente = ({ paciente, standalone = false }) => {
     setTimeout(() => {
       setDadosSmartwatch({
         batimentos: String(Math.floor(Math.random() * (90 - 65 + 1) + 65)),
-        qualidadeSono: String(Math.floor(Math.random() * (95 - 70 + 1) + 70)),
-        passos: String(Math.floor(Math.random() * (12000 - 5000 + 1) + 5000)),
-        calorias: String(Math.floor(Math.random() * (500 - 200 + 1) + 200)),
         nivelStress: ['Baixo', 'Médio', 'Alto'][Math.floor(Math.random() * 3)],
         ultimaSincronizacao: new Date().toLocaleString(),
       });
@@ -152,8 +140,6 @@ const SmartwatchPaciente = ({ paciente, standalone = false }) => {
           <View style={[styles.statIcon, { backgroundColor: '#D1FAE5' }]}>
             <Icon name="moon" size={24} color="#10B981" />
           </View>
-          <Text style={styles.statValue}>{dadosSmartwatch.qualidadeSono}%</Text>
-          <Text style={styles.statLabel}>Qualidade do Sono</Text>
         </View>
       </View>
 

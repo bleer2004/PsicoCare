@@ -74,14 +74,12 @@ const Relatorios = ({ navigation }) => {
       tipo: 'smartwatch',
       titulo: 'Relatório de Dados do Smartwatch - Semana 21',
       data: '25/05/2024',
-      descricao: 'Dados de frequência cardíaca, sono e atividade física da semana.',
+      descricao: 'Dados de frequência cardíaca.',
       conteudo: {
         batimentos: { media: 72, max: 89, min: 65 },
-        sono: { qualidade: 84, profundo: '2h40', rem: '3h15' },
-        passos: { total: 58432, media: 8347 },
         stress: 'Baixo',
       },
-      analiseIA: 'Paciente apresentou melhora na qualidade do sono em 15% comparado à semana anterior. Níveis de stress mantiveram-se baixos, indicando boa resposta ao tratamento. Recomenda-se manter a rotina atual de exercícios.',
+      analiseIA: 'Níveis de stress mantiveram-se baixos, indicando boa resposta ao tratamento. Recomenda-se manter a rotina atual de exercícios.',
     },
     {
       id: '2',
@@ -101,14 +99,12 @@ const Relatorios = ({ navigation }) => {
       tipo: 'smartwatch',
       titulo: 'Relatório de Dados do Smartwatch - Semana 20',
       data: '18/05/2024',
-      descricao: 'Dados de frequência cardíaca, sono e atividade física da semana.',
+      descricao: 'Dados de frequência cardíaca.',
       conteudo: {
         batimentos: { media: 78, max: 95, min: 70 },
-        sono: { qualidade: 72, profundo: '1h50', rem: '2h45' },
-        passos: { total: 42100, media: 6014 },
         stress: 'Médio',
       },
-      analiseIA: 'Paciente apresenta níveis de stress elevados. Qualidade do sono abaixo da média recomendada. Sugere-se revisão das estratégias de relaxamento e aumento da atividade física.',
+      analiseIA: 'Paciente apresenta níveis de stress elevados. Sugere-se revisão das estratégias de relaxamento e aumento da atividade física.',
     },
     {
       id: '4',
@@ -169,10 +165,6 @@ const Relatorios = ({ navigation }) => {
 
 📈 DADOS DE SAÚDE:
 • Batimentos cardíacos: Média ${relatorio.conteudo.batimentos.media} BPM | Máx ${relatorio.conteudo.batimentos.max} | Mín ${relatorio.conteudo.batimentos.min}
-• Qualidade do sono: ${relatorio.conteudo.sono.qualidade}%
-• Sono profundo: ${relatorio.conteudo.sono.profundo}
-• Sono REM: ${relatorio.conteudo.sono.rem}
-• Passos: ${relatorio.conteudo.passos.total.toLocaleString()} (média ${relatorio.conteudo.passos.media}/dia)
 • Nível de stress: ${relatorio.conteudo.stress}
 
 🤖 ANÁLISE DA IA:
@@ -532,14 +524,6 @@ Relatório gerado por ApsiCare - Plataforma de Saúde Mental
                       Média {analiseSelecionada.conteudo.batimentos.media} BPM | 
                       Máx {analiseSelecionada.conteudo.batimentos.max} | 
                       Mín {analiseSelecionada.conteudo.batimentos.min}
-                    </Text>
-                  </View>
-                  <View style={styles.detalhesRow}>
-                    <Text style={styles.detalhesLabel}>Sono:</Text>
-                    <Text style={styles.detalhesValue}>
-                      Qualidade {analiseSelecionada.conteudo.sono.qualidade}% | 
-                      Profundo {analiseSelecionada.conteudo.sono.profundo} | 
-                      REM {analiseSelecionada.conteudo.sono.rem}
                     </Text>
                   </View>
                   <View style={styles.detalhesRow}>

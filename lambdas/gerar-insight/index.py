@@ -5,7 +5,7 @@ from datetime import datetime
 from boto3.dynamodb.conditions import Key
 
 dynamo = boto3.resource("dynamodb", region_name="sa-east-1")
-table  = dynamo.Table("PsicoCare")
+table  = dynamo.Table("ApsiCare")
 
 PERFIS_WESAD = {
     "S14": "hiperreativo",
@@ -63,7 +63,6 @@ def gerar_insight_fixo(perfil, fase_dia, flag, divergence):
                 "body":     f"[{momento}] O corpo apresentou sinais elevados de estresse enquanto o relato subjetivo foi baixo — possível ansiedade não reconhecida.",
                 "category": "stress"
             }
-
     elif flag == "overreported":
         if perfil == "hiperreativo":
             return {
@@ -77,8 +76,7 @@ def gerar_insight_fixo(perfil, fase_dia, flag, divergence):
                 "body":     f"[{momento}] O estresse relatado foi maior do que os sinais fisiológicos — possível ansiedade antecipatória ou dificuldade de regulação emocional.",
                 "category": "humor"
             }
-
-    else:  # aligned
+    else:
         if perfil == "dissociativo":
             return {
                 "title":    "Estado Estável",
@@ -125,32 +123,183 @@ def resolver_patient_id(event):
 
     return pk, patient_id
 
-def handler(event, context):
+def resolver_action(event):
+    action = event.get("action")
+    if not action:
+        body = event.get("body")
+        if body:
+            try:
+                parsed = json.loads(body) if isinstance(body, str) else body
+                action = parsed.get("action")
+            except Exception:
+                pass
+    if not action:
+        path_params = event.get("pathParameters") or {}
+        action = path_params.get("action")
+    return action or "insight"
 
-    # 1. Resolver patientId
+# ── RELATÓRIO SEMANAL 
+def gerar_relatorio_semanal(event):
+    pk, patient_id = resolver_patient_id(event)
+    if not patient_id:
+        return _resp(400, {"error": "patientId obrigatório"})
+
+    # busca wesadId do paciente real
+    perfil_item = table.get_item(Key={"PK": pk, "SK": pk}).get("Item", {})
+    wesad_id    = perfil_item.get("wesadId")
+    pk_dados    = f"PATIENT#{wesad_id}" if wesad_id else pk
+
+    # busca os DAILY_NPS do sujeito WESAD
+    resp = table.query(
+        KeyConditionExpression=Key("PK").eq(pk_dados) & Key("SK").begins_with("DAILY_NPS#"),
+        ScanIndexForward=True
+    )
+    dias = resp.get("Items", [])
+
+    if not dias:
+        return _resp(404, {
+            "error": "Nenhum dado diário encontrado",
+            "pk_dados": pk_dados,
+            "dica": "Salve os itens DAILY_NPS# no DynamoDB para PATIENT#S16_baseline_test"
+        })
+
+    # agrega os dias
+    flags       = [d["flag"] for d in dias]
+    divs        = [float(d["divergence"]) for d in dias]
+    hrs         = [float(d["HR"]) for d in dias]
+    ibis        = [float(d["IBI"]) for d in dias]
+    rmssds      = [float(d["RMSSD"]) for d in dias]
+    sfs         = [float(d.get("stress_physio", 0)) for d in dias]
+    perfil      = dias[0].get("perfil", "neutro")
+
+    total       = len(flags)
+    div_media   = round(sum(divs)   / total, 4)
+    hr_media    = round(sum(hrs)    / total, 1)
+    ibi_media   = round(sum(ibis)   / total, 1)
+    rmssd_media = round(sum(rmssds) / total, 1)
+    sf_media    = round(sum(sfs)    / total, 4)
+    pct_risk    = round(flags.count("anxiety_risk")  / total * 100)
+    pct_over    = round(flags.count("overreported")  / total * 100)
+    pct_align   = round(flags.count("aligned")       / total * 100)
+    flag_dom    = max(set(flags), key=flags.count)
+
+    # insight consolidado semanal
+    if pct_risk >= 40:
+        titulo = "⚠️ Atenção: Padrão Dissociativo Recorrente"
+        corpo  = (
+            f"Em {pct_risk}% dos dias monitorados, o paciente apresentou estresse fisiológico "
+            f"elevado (HR média {hr_media} bpm, IBI {ibi_media} ms) com baixo relato subjetivo — "
+            f"padrão consistente com perfil {perfil}. "
+            f"Divergência média da semana: {div_media:+.4f}. "
+            f"Recomenda-se explorar esse padrão na próxima sessão."
+        )
+        categoria = "stress"
+    elif flag_dom == "overreported":
+        titulo = "📊 Sofrimento Subjetivo Elevado na Semana"
+        corpo  = (
+            f"O paciente relatou mais sofrimento do que a fisiologia indicou na maioria dos dias. "
+            f"Divergência média: {div_media:+.4f}. "
+            f"Possível ansiedade antecipatória ou dificuldade de regulação emocional."
+        )
+        categoria = "humor"
+    else:
+        titulo = "✅ Semana com Boa Regulação Emocional"
+        corpo  = (
+            f"A percepção subjetiva esteve alinhada com os sinais fisiológicos na maior parte da semana. "
+            f"HR média: {hr_media} bpm, RMSSD: {rmssd_media} ms. "
+            f"Divergência média: {div_media:+.4f}. "
+            f"Bom indicador de regulação para o perfil {perfil}."
+        )
+        categoria = "bem-estar"
+
+    # detalhamento por dia
+    detalhes_dias = [
+        {
+            "dia":        int(d.get("day", 0)),
+            "data":       d["timestamp"],
+            "flag":       d["flag"],
+            "divergencia": float(d["divergence"]),
+            "HR":         float(d["HR"]),
+            "IBI":        float(d["IBI"]),
+            "RMSSD":      float(d["RMSSD"]),
+            "mood":       int(d.get("mood", 0)),
+            "emoji":      d.get("emotion_emoji", ""),
+            "contexto":   d.get("context", ""),
+            "insight":    d.get("insight", ""),
+        }
+        for d in dias
+    ]
+
+    # salva INSIGHT# no DynamoDB do paciente real
+    ts = datetime.now().isoformat()
+    table.put_item(Item={
+        "PK": pk,
+        "SK": f"INSIGHT#{ts}",
+        "type": "INSIGHT",
+        "data": {
+            "title":             titulo,
+            "body":              corpo,
+            "category":          categoria,
+            "weekStart":         dias[0]["timestamp"][:10],
+            "isRead":            False,
+            "perfil":            perfil,
+            "flag":              flag_dom,
+            "divergence":        str(div_media),
+            "stress_physio":     str(sf_media),
+            "hr_mean":           str(hr_media),
+            "ibi_mean":          str(ibi_media),
+            "rmssd":             str(rmssd_media),
+            "pct_anxiety_risk":  str(pct_risk),
+            "pct_aligned":       str(pct_align),
+            "pct_overreported":  str(pct_over),
+            "dias":              json.dumps(detalhes_dias, ensure_ascii=False),
+            "amostras":          total,
+        },
+        "createdAt": ts
+    })
+
+    return _resp(200, {
+        "message":     "Relatório semanal gerado com sucesso",
+        "pk_paciente": pk,
+        "pk_dados":    pk_dados,
+        "relatorio": {
+            "titulo":          titulo,
+            "corpo":           corpo,
+            "categoria":       categoria,
+            "perfil":          perfil,
+            "flag_dominante":  flag_dom,
+            "divergencia_media": div_media,
+            "hr_media":        hr_media,
+            "ibi_media":       ibi_media,
+            "rmssd_media":     rmssd_media,
+            "stress_physio":   sf_media,
+            "pct_anxiety_risk": pct_risk,
+            "pct_aligned":     pct_align,
+            "pct_overreported": pct_over,
+            "dias":            detalhes_dias,
+        }
+    })
+
+# ── INSIGHT DIÁRIO (handler original) ───────────────────────
+def gerar_insight_handler(event):
     pk, patient_id = resolver_patient_id(event)
 
     if not patient_id:
         return _resp(400, {
             "error": "patientId é obrigatório",
             "exemplos": {
-                "direto":  '{"patientId": "S16_baseline_test"}',
-                "real":    '{"patientId": "240fa940-1010-4047-a07f-d34e7bb0e3b2"}',
-                "query":   "?patientId=S16_baseline_test",
+                "direto":   '{"patientId": "S16_baseline_test"}',
+                "real":     '{"patientId": "240fa940-1010-4047-a07f-d34e7bb0e3b2"}',
+                "semanal":  '{"patientId": "240fa940-...", "action": "weekly-report"}'
             }
         })
 
-    # 2. Buscar perfil do paciente no DynamoDB para pegar wesadId
-    perfil_item = table.get_item(
-        Key={"PK": pk, "SK": pk}
-    ).get("Item", {})
+    # busca wesadId
+    perfil_item = table.get_item(Key={"PK": pk, "SK": pk}).get("Item", {})
+    wesad_id    = perfil_item.get("wesadId")
+    pk_dados    = f"PATIENT#{wesad_id}" if wesad_id else pk
 
-    wesad_id = perfil_item.get("wesadId")  # ex: "S16_baseline_test"
-
-    # Se tiver wesadId usa os dados do WESAD, senão usa os do próprio paciente
-    pk_dados = f"PATIENT#{wesad_id}" if wesad_id else pk
-
-    # 3. Buscar HEALTH_BATCHes
+    # busca HEALTH_BATCHes
     resp = table.query(
         KeyConditionExpression=Key("PK").eq(pk_dados) & Key("SK").begins_with("HEALTH_BATCH#"),
         ScanIndexForward=False,
@@ -160,14 +309,13 @@ def handler(event, context):
 
     if not batches:
         return _resp(404, {
-            "error":      f"Sem dados fisiológicos para {pk_dados}",
-            "pk_paciente": pk,
-            "pk_dados":    pk_dados,
-            "wesad_id":    wesad_id,
-            "dica":        "Adicione o atributo 'wesadId' no item do paciente no DynamoDB"
+            "error":     f"Sem dados fisiológicos para {pk_dados}",
+            "pk_dados":  pk_dados,
+            "wesad_id":  wesad_id,
+            "dica":      "Adicione wesadId no perfil do paciente ou salve HEALTH_BATCHes"
         })
 
-    # 4. Agregar dataPoints
+    # agrega dataPoints
     hrs, ibis, temps = [], [], []
     label_counts = {}
 
@@ -186,12 +334,10 @@ def handler(event, context):
     if not hrs:
         return _resp(400, {"error": "dataPoints sem valores de HR válidos"})
 
-    # 5. Calcular métricas
-    n          = len(hrs)
-    hr_mean    = sum(hrs)   / n
-    ibi_mean   = sum(ibis)  / len(ibis)  if ibis  else 850.0
-    temp_mean  = sum(temps) / len(temps) if temps else 30.0
-    rmssd      = calc_rmssd(ibis) if len(ibis) >= 2 else 0.0
+    n           = len(hrs)
+    hr_mean     = sum(hrs)   / n
+    ibi_mean    = sum(ibis)  / len(ibis)  if ibis  else 850.0
+    rmssd       = calc_rmssd(ibis) if len(ibis) >= 2 else 0.0
 
     hr_min,    hr_max    = min(hrs),  max(hrs)
     ibi_min,   ibi_max   = (min(ibis), max(ibis)) if ibis else (600, 1300)
@@ -204,10 +350,8 @@ def handler(event, context):
         rmssd_min, rmssd_max
     )
 
-    # 6. Perfil: WESAD fixo ou inferido
-    subject_key = (wesad_id or patient_id).split("_")[0].upper()  # "S16_baseline_test" → "S16"
+    subject_key = (wesad_id or patient_id).split("_")[0].upper()
     perfil = PERFIS_WESAD.get(subject_key)
-
     if not perfil:
         if hr_mean > 90 and ibi_mean < 700:
             perfil = "hiperreativo"
@@ -216,7 +360,6 @@ def handler(event, context):
         else:
             perfil = "neutro"
 
-    # 7. Flag de divergência
     label_dominante = max(label_counts, key=label_counts.get) if label_counts else "baseline"
     hora_atual      = datetime.now().hour
     fase_dia        = hora_para_label(hora_atual)
@@ -229,13 +372,11 @@ def handler(event, context):
     elif divergence <= -0.3: flag = "overreported"
     else:                    flag = "aligned"
 
-    # 8. Gerar insight com regras fixas
     insight = gerar_insight_fixo(perfil, fase_dia, flag, divergence)
 
-    # 9. Salvar INSIGHT# no DynamoDB com o PK do paciente real (Verina)
     ts = datetime.now().isoformat()
     table.put_item(Item={
-        "PK": pk,           # PATIENT#240fa940-... (Verina)
+        "PK": pk,
         "SK": f"INSIGHT#{ts}",
         "type": "INSIGHT",
         "data": {
@@ -273,6 +414,12 @@ def handler(event, context):
         "insight":       insight
     })
 
+# ── HANDLER PRINCIPAL 
+def handler(event, context):
+    action = resolver_action(event)
+    if action == "weekly-report":
+        return gerar_relatorio_semanal(event)
+    return gerar_insight_handler(event)
 
 def _resp(code, body):
     return {

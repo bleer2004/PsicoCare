@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, PutCommand, GetCommand } from "@aws-sdk/lib-dyn
 
 const client = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(client);
-const TABLE_NAME = "PsicoCare";
+const TABLE_NAME = "ApsiCare";
 
 export const handler = async (event) => {
   try {

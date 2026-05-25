@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 
 const client = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(client);
-const TABLE_NAME = "PsicoCare";
+const TABLE_NAME = "ApsiCare";
 
 export const handler = async (event) => {
   try {
@@ -19,22 +19,20 @@ export const handler = async (event) => {
       TableName: TABLE_NAME,
       IndexName: "GSI1PK-GSI1SK-index",
       KeyConditionExpression: "GSI1PK = :email",
-      ExpressionAttributeValues: {
-        ":email": `EMAIL#${email.trim().toLowerCase()}`
-      }
+      ExpressionAttributeValues: { ":email": `EMAIL#${email.trim().toLowerCase()}` }
     }));
 
     if (!result.Items || result.Items.length === 0) {
       return response(401, { error: "Email ou senha incorretos" });
     }
 
+    // Garante que só lê o PATIENT — ignora psicólogo com mesmo email
     const patient = result.Items.find(item => item.PK.startsWith("PATIENT#"));
 
     if (!patient) {
       return response(401, { error: "Email ou senha incorretos" });
     }
 
-    // Verifica senha — tempPassword direto, senão bcrypt
     let senhaValida = false;
     if (patient.tempPassword && patient.tempPassword === password) {
       senhaValida = true;
@@ -78,9 +76,6 @@ export const handler = async (event) => {
 
 const response = (statusCode, body) => ({
   statusCode,
-  headers: {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*"
-  },
+  headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
   body: JSON.stringify(body)
 });

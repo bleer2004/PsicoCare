@@ -16,8 +16,9 @@ import {
   ActivityIndicator,
   Modal,
   Switch,
-  Slider,
 } from 'react-native';
+
+import Slider from '@react-native-community/slider';
 import Icon from 'react-native-vector-icons/Feather';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -40,6 +41,8 @@ const CadastroPaciente = ({ navigation }) => {
   const [diagnostico, setDiagnostico] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [patientIdCriado, setPatientIdCriado] = useState(null);
+  const [cadastroConcluido, setCadastroConcluido] = useState(false);
 
   // Configurações de IA
   const [interacaoMotivacional, setInteracaoMotivacional] = useState(true);
@@ -92,72 +95,117 @@ const CadastroPaciente = ({ navigation }) => {
   };
 
   const handleSalvar = async () => {
-    if (!nome || !sobrenome || !email) {
-      Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios');
+  if (!nome || !email) {
+    Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios');
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    Alert.alert('Erro', 'Digite um e-mail válido');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const userStr = await AsyncStorage.getItem('user');
+    const user = JSON.parse(userStr);
+    const token = await AsyncStorage.getItem('token');
+
+    const formatDate = (date) => {
+      if (!date) return null;
+      const [day, month, year] = date.split('/');
+      return `${year}-${month}-${day}`;
+    };
+
+    // 1. Cadastra o paciente
+    const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        name: `${nome} ${sobrenome}`.trim(),
+        email,
+        phone: telefone.replace(/\D/g, ''),
+        birthDate: formatDate(dataNascimento),
+        diagnostico,
+        observacoes,
+        configuracoesIA: {
+          interacaoMotivacional,
+          analisePadroes,
+          sugestoesReflexao,
+          intensidadeInteracao,
+        },
+        configuracoesApp: {
+          modoMinimalista,
+          removerEstimulos,
+          notificacoes: {
+            frequencia: frequenciaNotificacoes,
+            horarioInicio,
+            horarioFim,
+            intervalo: intervaloNotificacoes,
+          },
+        },
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      Alert.alert('Erro', data.error || 'Erro ao cadastrar paciente');
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Erro', 'Digite um e-mail válido');
-      return;
-    }
-    setLoading(true);
-    try {
-      const userStr = await AsyncStorage.getItem('user');
-      const user = JSON.parse(userStr);
-      const token = await AsyncStorage.getItem('token');
 
-      const formatDate = (date) => {
-        if (!date) return null;
-        const [day, month, year] = date.split('/');
-        return `${year}-${month}-${day}`;
-      };
+    const patientId = data.patient?.id;
+    setPatientIdCriado(patientId);
 
-      const response = await fetch(`${API_URL}/clinicians/${user.id}/patients`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          name: `${nome} ${sobrenome}`,
-          email,
-          phone: telefone.replace(/\D/g, ''),
-          birthDate: formatDate(dataNascimento),
-          diagnostico,
-          observacoes,
-          configuracoesIA: {
-            interacaoMotivacional,
-            analisePadroes,
-            sugestoesReflexao,
-            intensidadeInteracao,
-          },
-          configuracoesApp: {
-            modoMinimalista,
-            removerEstimulos,
-            notificacoes: {
-              frequencia: frequenciaNotificacoes,
-              horarioInicio,
-              horarioFim,
-              intervalo: intervaloNotificacoes,
-            },
-            contatosEmergencia: contatosEmergencia.filter(c => !c.isPreset || c.numero),
-          },
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        Alert.alert('Erro', data.error || 'Erro ao cadastrar paciente');
-        return;
+    // 2. Salva contatos de emergência não-preset na Lambda
+    const contatosCustom = contatosEmergencia.filter(c => !c.isPreset);
+    for (const contato of contatosCustom) {
+      try {
+        await fetch(`${API_URL}/patients/${patientId}/emergency-contact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            nome: contato.nome,
+            telefone: contato.numero,
+            relacao: contato.relacao || 'Não informado',
+          }),
+        });
+      } catch (err) {
+        console.warn('Erro ao salvar contato de emergência:', err);
       }
-      Alert.alert('Sucesso', 'Paciente cadastrado com sucesso!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
-    } finally {
-      setLoading(false);
     }
-  };
+
+    Alert.alert('Paciente cadastrado!', 'O paciente foi cadastrado com sucesso.');
+    setCadastroConcluido(true);
+
+  } catch (err) {
+    console.error(err);
+    Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleEnviarConvite = async () => {
+  if (!patientIdCriado) {
+    Alert.alert('Atenção', 'Cadastre o paciente antes de enviar o convite.');
+    return;
+  }
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const res = await fetch(`${API_URL}/patients/${patientIdCriado}/invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      Alert.alert('Erro', data.error || 'Erro ao enviar convite');
+      return;
+    }
+    Alert.alert('Convite enviado!', 'O paciente receberá um e-mail com as credenciais de acesso.');
+  } catch (err) {
+    Alert.alert('Erro', 'Não foi possível enviar o convite.');
+  }
+};
 
   const handleAdicionarContato = () => {
     if (!novoContatoNome || !novoContatoNumero) {
@@ -209,71 +257,86 @@ const CadastroPaciente = ({ navigation }) => {
     return option ? option.label : 'Diária';
   };
 
-  const renderEmergenciaModal = () => (
-    <Modal
-      visible={showEmergenciaModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => {
-        setShowEmergenciaModal(false);
-        setEditandoContato(null);
-        setNovoContatoNome('');
-        setNovoContatoNumero('');
-      }}
+ const renderEmergenciaModal = () => (
+  <Modal
+    visible={showEmergenciaModal}
+    transparent={true}
+    animationType="slide"
+    onRequestClose={() => {
+      setShowEmergenciaModal(false);
+      setEditandoContato(null);
+      setNovoContatoNome('');
+      setNovoContatoNumero('');
+    }}
+  >
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1, justifyContent: 'flex-end' }}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editandoContato ? 'Editar Contato' : 'Novo Contato de Emergência'}
+      <TouchableOpacity
+        style={{ flex: 1 }}
+        activeOpacity={1}
+        onPress={() => {
+          setShowEmergenciaModal(false);
+          setEditandoContato(null);
+          setNovoContatoNome('');
+          setNovoContatoNumero('');
+        }}
+      />
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>
+            {editandoContato ? 'Editar Contato' : 'Novo Contato de Emergência'}
+          </Text>
+          <TouchableOpacity onPress={() => {
+            setShowEmergenciaModal(false);
+            setEditandoContato(null);
+            setNovoContatoNome('');
+            setNovoContatoNumero('');
+          }}>
+            <Icon name="x" size={24} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.modalContent, { paddingBottom: 32 }]}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Nome do Contato</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="user" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Mãe, Irmão, Amigo"
+                placeholderTextColor="#94A3B8"
+                value={novoContatoNome}
+                onChangeText={setNovoContatoNome}
+                returnKeyType="next"
+              />
+            </View>
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Número de Telefone</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="phone" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="(00) 00000-0000"
+                placeholderTextColor="#94A3B8"
+                value={novoContatoNumero}
+                onChangeText={(text) => setNovoContatoNumero(formatTelefone(text))}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+          <TouchableOpacity style={styles.modalButton} onPress={handleAdicionarContato}>
+            <Text style={styles.modalButtonText}>
+              {editandoContato ? 'Atualizar Contato' : 'Adicionar Contato'}
             </Text>
-            <TouchableOpacity onPress={() => {
-              setShowEmergenciaModal(false);
-              setEditandoContato(null);
-              setNovoContatoNome('');
-              setNovoContatoNumero('');
-            }}>
-              <Icon name="x" size={24} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.modalContent}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nome do Contato</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="user" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ex: Mãe, Irmão, Amigo"
-                  placeholderTextColor="#94A3B8"
-                  value={novoContatoNome}
-                  onChangeText={setNovoContatoNome}
-                />
-              </View>
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Número de Telefone</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="phone" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="(00) 00000-0000"
-                  placeholderTextColor="#94A3B8"
-                  value={novoContatoNumero}
-                  onChangeText={(text) => setNovoContatoNumero(formatTelefone(text))}
-                  keyboardType="phone-pad"
-                />
-              </View>
-            </View>
-            <TouchableOpacity style={styles.modalButton} onPress={handleAdicionarContato}>
-              <Text style={styles.modalButtonText}>
-                {editandoContato ? 'Atualizar Contato' : 'Adicionar Contato'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
-    </Modal>
-  );
+    </KeyboardAvoidingView>
+  </Modal>
+);
 
   const renderFrequenciaPickerModal = () => (
     <Modal
@@ -329,7 +392,23 @@ const CadastroPaciente = ({ navigation }) => {
       {/* Header com blur */}
       <View style={styles.headerBlur}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => {
+              if (cadastroConcluido) {
+                navigation.goBack();
+              } else {
+                Alert.alert(
+                  'Sair sem salvar?',
+                  'O paciente ainda não foi cadastrado.',
+                  [
+                    { text: 'Ficar', style: 'cancel' },
+                    { text: 'Sair', onPress: () => navigation.goBack() }
+                  ]
+                );
+              }
+            }}
+            style={styles.backButton}
+          >
             <Icon name="arrow-left" size={24} color="#475569" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cadastrar novo paciente</Text>
@@ -403,6 +482,19 @@ const CadastroPaciente = ({ navigation }) => {
               </View>
             </View>
           </View>
+
+          <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Data de Nascimento</Text>
+          <TouchableOpacity
+            style={styles.inputWrapper}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Icon name="calendar" size={20} color="#94A3B8" style={styles.inputIcon} />
+            <Text style={[styles.input, { color: dataNascimento ? '#0F172A' : '#6B7280' }]}>
+              {dataNascimento || 'DD/MM/AAAA'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
           {/* Informações Clínicas */}
           <View style={styles.section}>
@@ -619,19 +711,36 @@ const CadastroPaciente = ({ navigation }) => {
           </View>
 
           {/* Botão Enviar Convite */}
-          <TouchableOpacity style={styles.inviteButton}>
-            <Icon name="mail" size={16} color="#B367D4" />
-            <Text style={styles.inviteButtonText}>Enviar convite por e-mail</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.inviteButton, !patientIdCriado && styles.inviteButtonDisabled]}
+          onPress={handleEnviarConvite}
+          disabled={!patientIdCriado}
+        >
+          <Icon name="mail" size={16} color={patientIdCriado ? "#B367D4" : "#94A3B8"} />
+          <Text style={[styles.inviteButtonText, !patientIdCriado && styles.inviteButtonTextDisabled]}>
+            Enviar convite por e-mail
+          </Text>
+        </TouchableOpacity>
 
           {/* Botão Cadastrar */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleSalvar} disabled={loading}>
+          <TouchableOpacity
+            style={[styles.saveButton, cadastroConcluido && { backgroundColor: '#10B981' }]}
+            onPress={handleSalvar}
+            disabled={loading || cadastroConcluido}
+          >
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Icon name="save" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.saveButtonText}>Cadastrar Paciente</Text>
+                <Icon
+                  name={cadastroConcluido ? 'check' : 'save'}
+                  size={18}
+                  color="#FFFFFF"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.saveButtonText}>
+                  {cadastroConcluido ? 'Paciente Cadastrado!' : 'Cadastrar Paciente'}
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -639,16 +748,16 @@ const CadastroPaciente = ({ navigation }) => {
       </KeyboardAvoidingView>
 
       {/* Modal de Data */}
-      {showDatePicker && (
+     {showDatePicker && (
         <Modal transparent animationType="slide">
-          <View style={styles.datePickerOverlay}>
-            <View style={styles.datePickerContainer}>
-              <View style={styles.datePickerHeader}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+            <View style={{ backgroundColor: "#1E293B", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 40 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.datePickerCancelText}>Cancelar</Text>
+                  <Text style={{ color: '#64748B', fontSize: 16 }}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleConfirmarData}>
-                  <Text style={styles.datePickerConfirmText}>Confirmar</Text>
+                  <Text style={{ color: 'rgba(179, 103, 212, 0.84)', fontSize: 16, fontWeight: '600' }}>Confirmar</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -658,13 +767,13 @@ const CadastroPaciente = ({ navigation }) => {
                 onChange={handleDateChange}
                 maximumDate={new Date()}
                 locale="pt-BR"
-                style={styles.datePicker}
+                style={{ height: 380 }}
               />
             </View>
           </View>
         </Modal>
       )}
-
+      
       {/* Modal de Emergência */}
       {renderEmergenciaModal()}
 
@@ -1081,6 +1190,13 @@ const styles = StyleSheet.create({
   },
   navTextActive: {
     color: '#B367D4',
+  },
+  inviteButtonDisabled: {
+  borderColor: '#CBD5E1',
+  opacity: 0.6,
+  },
+  inviteButtonTextDisabled: {
+    color: '#94A3B8',
   },
 });
 

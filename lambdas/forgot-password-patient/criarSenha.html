@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crie sua senha - ApsiCare</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #F8F4FF 0%, #F3F4F6 100%); padding: 32px 16px; }
+    .container { max-width: 520px; margin: 0 auto; background: #FFFFFF; border-radius: 32px; overflow: hidden; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.1), 0 0 0 1px rgba(179,103,212,0.1); }
+    .header { background: linear-gradient(135deg, #B367D4 0%, #9333EA 100%); padding: 40px 24px; text-align: center; position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+    .header::after { content: ''; position: absolute; bottom: -30%; left: -10%; width: 150px; height: 150px; background: rgba(255,255,255,0.08); border-radius: 50%; }
+    .logo { font-size: 32px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; position: relative; z-index: 1; }
+    .logo-sub { font-size: 13px; color: rgba(255,255,255,0.85); margin-top: 6px; font-weight: 500; position: relative; z-index: 1; }
+    .content { padding: 32px 28px; }
+    .greeting { margin-bottom: 28px; text-align: center; }
+    .greeting h1 { font-size: 26px; font-weight: 700; color: #1F2937; margin-bottom: 8px; }
+    .greeting p { font-size: 15px; color: #6B7280; line-height: 1.5; }
+    .welcome-card { background: #F8F4FF; border-radius: 20px; padding: 20px; margin-bottom: 24px; border: 1px solid #E9D5FF; display: flex; align-items: center; gap: 14px; }
+    .welcome-icon { font-size: 32px; }
+    .welcome-text strong { color: #6B21A8; font-size: 14px; display: block; margin-bottom: 4px; }
+    .welcome-text p { color: #7E22CE; font-size: 13px; line-height: 1.4; }
+    .info-card { background: #F9FAFB; border-radius: 20px; padding: 20px; margin-bottom: 24px; border: 1px solid #F3F4F6; }
+    .info-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #E5E7EB; }
+    .info-header h3 { font-size: 15px; font-weight: 600; color: #374151; }
+    .info-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
+    .info-item:not(:last-child) { border-bottom: 1px solid #E5E7EB; }
+    .info-label { font-size: 14px; color: #6B7280; display: flex; align-items: center; gap: 8px; }
+    .info-value { font-size: 14px; font-weight: 600; color: #1F2937; }
+    .code-card { background: linear-gradient(135deg, #F8F4FF 0%, #FAFAFA 100%); border-radius: 20px; padding: 24px; margin-bottom: 24px; text-align: center; border: 1px solid #E9D5FF; }
+    .code-label { font-size: 12px; color: #7E22CE; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 12px; }
+    .code-value { font-size: 36px; font-weight: 800; font-family: 'Courier New', monospace; letter-spacing: 8px; color: #1F2937; background: #FFFFFF; padding: 16px 20px; border-radius: 16px; display: inline-block; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .code-expiry { font-size: 12px; color: #6B7280; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .steps-card { background: #F9FAFB; border-radius: 16px; padding: 20px; margin-bottom: 24px; border: 1px solid #F3F4F6; }
+    .steps-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .step:last-child { margin-bottom: 0; }
+    .step-number { width: 24px; height: 24px; background: #B367D4; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .step-text { font-size: 13px; color: #4B5563; line-height: 1.4; padding-top: 3px; }
+    .tips-card { background: #F0FDF4; border-radius: 16px; padding: 16px; margin-bottom: 24px; border-left: 4px solid #10B981; }
+    .tips-title { font-size: 13px; font-weight: 700; color: #065F46; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .tips-list { list-style: none; }
+    .tips-list li { font-size: 12px; color: #047857; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .tips-list li:before { content: "•"; font-size: 14px; }
+    .footer { background: #FAFAFE; padding: 24px 28px; text-align: center; border-top: 1px solid #F0F0F5; }
+    .security-badge { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); padding: 8px 16px; border-radius: 40px; margin-bottom: 20px; }
+    .security-badge span:last-child { font-size: 12px; font-weight: 700; color: #065F46; letter-spacing: 0.5px; }
+    .footer-copyright { font-size: 11px; color: #9CA3AF; margin-bottom: 8px; }
+    .footer-note { font-size: 10px; color: #D1D5DB; }
+    hr { border: none; border-top: 1px solid #E5E7EB; margin: 16px 0; }
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+      .content { padding: 24px 20px; }
+      .code-value { font-size: 28px; letter-spacing: 6px; padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">ApsiCare</div>
+      <div class="logo-sub">plataforma clínica de saúde mental</div>
+    </div>
+    <div class="content">
+      <div class="greeting">
+        <h1>Acesse o ApsiCare! 💜</h1>
+        <p>Use o código abaixo para acessar ou criar sua senha no app.</p>
+      </div>
+      <div class="welcome-card">
+        <div class="welcome-icon">🎉</div>
+        <div class="welcome-text">
+        <strong>Código de verificação gerado!</strong>
+        <p>Use o código abaixo para confirmar sua identidade e criar ou redefinir sua senha.</p>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-header">
+          <span>📋</span>
+          <h3>Seus dados de acesso</h3>
+        </div>
+        <div class="info-item">
+          <div class="info-label"><span>📧</span> E-mail</div>
+          <div class="info-value">${email}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label"><span>📱</span> App</div>
+          <div class="info-value">ApsiCare Paciente</div>
+        </div>
+      </div>
+      <div class="code-card">
+        <div class="code-label">Código de verificação</div>
+        <div class="code-value">${codigo}</div>
+        <div class="code-expiry">
+          <span>⏱️</span>
+          <span>Válido por 15 minutos</span>
+        </div>
+      </div>
+      <div class="steps-card">
+        <div class="steps-title"><span>📱</span> Como criar sua senha</div>
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-text">Abra o app ApsiCare no seu celular</div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-text">Toque em <strong>"Esqueci minha senha"</strong> na tela de login</div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-text">Digite seu e-mail e insira o código acima</div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-text">Crie uma senha segura e pronto!</div>
+        </div>
+      </div>
+      <div class="tips-card">
+        <div class="tips-title"><span>🛡️</span> Dicas para uma senha segura</div>
+        <ul class="tips-list">
+          <li>Use pelo menos 8 caracteres</li>
+          <li>Combine letras maiúsculas, minúsculas e números</li>
+          <li>Inclua caracteres especiais (!@#$%)</li>
+          <li>Não compartilhe sua senha com ninguém</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="security-badge">
+        <span>🔒</span>
+        <span>AMBIENTE SEGURO & CRIPTOGRAFADO</span>
+      </div>
+      <div class="footer-copyright">© 2025 ApsiCare — Todos os direitos reservados</div>
+      <hr>
+      <div class="footer-note">
+        Este e-mail foi enviado para ${email}<br>
+        Se você não esperava este e-mail, entre em contato com seu psicólogo.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`

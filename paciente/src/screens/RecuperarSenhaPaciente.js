@@ -1,6 +1,5 @@
-// paciente/screens/RecuperarSenhaPaciente.js
-import React, { useState } from 'react';
-import { API_URL } from '../../../src/services/api'; // Caminho corrigido
+import React, { useState, useEffect } from 'react';
+import { API_URL } from '../../../src/services/api';
 import Icon from 'react-native-vector-icons/Feather';
 
 import {
@@ -19,45 +18,53 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-const RecuperarSenhaPaciente = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+const RecuperarSenhaPaciente = ({ navigation, route }) => {
+  const primeiroAcesso = route?.params?.primeiroAcesso || false;
+  const emailInicial = route?.params?.email || '';
+  const [email, setEmail] = useState(emailInicial);
+  const [step, setStep] = useState(emailInicial ? 2 : 1);
   const [codigo, setCodigo] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  useEffect(() => {
+    if (primeiroAcesso && emailInicial) {
+      enviarCodigoParaEmail(emailInicial).then(() => {
+        Alert.alert('Código enviado!', `Enviamos um código para ${emailInicial}. Verifique sua caixa de entrada ou spam.`);
+      });
+    }
+  }, []);
+
+  const enviarCodigoParaEmail = async (emailParaEnviar) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/patient/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailParaEnviar }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Erro', data.error || 'Erro ao enviar código');
+      }
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEnviarCodigo = async () => {
     if (!email) {
       Alert.alert('Erro', 'Por favor, digite seu e-mail');
       return;
     }
-    
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/auth/patient/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        Alert.alert('Erro', data.error || 'Erro desconhecido no servidor');
-        return;
-      }
-
-      setStep(2);
-      Alert.alert('Código enviado!', 'Verifique sua caixa de entrada ou spam.');
-    } catch (err) {
-      console.error("Erro na Requisição:", err);
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua internet.');
-    } finally {
-      setLoading(false);
-    }
+    await enviarCodigoParaEmail(email);
+    setStep(2);
+    Alert.alert('Código enviado!', 'Verifique sua caixa de entrada ou spam.');
   };
 
   const handleVerificarCodigo = async () => {
@@ -78,7 +85,7 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
         return;
       }
       setStep(3);
-      Alert.alert('Código verificado!', 'Agora você pode criar uma nova senha');
+      Alert.alert('Código verificado!', 'Agora você pode criar sua senha');
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
     } finally {
@@ -108,7 +115,7 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
       });
       const data = await response.json();
       if (!response.ok) {
-        Alert.alert('Erro', data.error || 'Erro ao redefinir senha');
+        Alert.alert('Erro', data.error || 'Erro ao criar senha');
         return;
       }
       setShowSuccessModal(true);
@@ -120,7 +127,7 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
   };
 
   const handleVoltarLogin = () => {
-    navigation.goBack();
+    navigation.replace('LoginPaciente');
   };
 
   const renderStepIndicator = () => (
@@ -143,7 +150,7 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
         <View style={[styles.stepCircle, step >= 3 && styles.stepActive]}>
           <Text style={[styles.stepNumber, step >= 3 && styles.stepNumberActive]}>3</Text>
         </View>
-        <Text style={[styles.stepLabel, step >= 3 && styles.stepLabelActive]}>Nova Senha</Text>
+        <Text style={[styles.stepLabel, step >= 3 && styles.stepLabelActive]}>Criar Senha</Text>
       </View>
     </View>
   );
@@ -153,11 +160,15 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
       <View style={styles.iconContainer}>
         <Icon name="mail" size={80} color="rgba(179, 103, 212, 0.84)" />
       </View>
-      <Text style={styles.stepTitle}>Esqueceu sua senha?</Text>
-      <Text style={styles.stepDescription}>
-        Digite seu e-mail cadastrado e enviaremos um código de verificação para redefinir sua senha.
+      <Text style={styles.stepTitle}>
+        {primeiroAcesso ? 'Primeiro acesso' : 'Acessar sua conta'}
       </Text>
-
+      <Text style={styles.stepDescription}>
+        {primeiroAcesso
+          ? 'Confirme seu e-mail para receber o código de verificação.'
+          : 'Digite seu e-mail cadastrado e enviaremos um código de verificação.'
+        }
+      </Text>
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>E-mail</Text>
         <View style={styles.inputWrapper}>
@@ -174,9 +185,8 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           />
         </View>
       </View>
-
-      <TouchableOpacity 
-        style={styles.button} 
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleEnviarCodigo}
         disabled={loading}
       >
@@ -195,10 +205,20 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
         <Icon name="shield" size={80} color="rgba(179, 103, 212, 0.84)" />
       </View>
       <Text style={styles.stepTitle}>Verificação</Text>
-      <Text style={styles.stepDescription}>
-        Enviamos um código de 6 dígitos para o e-mail {email}
-      </Text>
 
+      {loading && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+          <ActivityIndicator size="small" color="#B367D4" />
+          <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'Manrope' }}>Enviando código...</Text>
+        </View>
+      )}
+
+      <Text style={styles.stepDescription}>
+        {primeiroAcesso
+          ? `Enviamos um código de 6 dígitos para ${emailInicial}. Verifique sua caixa de entrada.`
+          : `Enviamos um código de 6 dígitos para o e-mail ${email}`
+        }
+      </Text>
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Código de verificação</Text>
         <View style={styles.inputWrapper}>
@@ -215,9 +235,8 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           />
         </View>
       </View>
-
-      <TouchableOpacity 
-        style={styles.button} 
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleVerificarCodigo}
         disabled={loading}
       >
@@ -227,10 +246,11 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           <Text style={styles.buttonText}>Verificar código →</Text>
         )}
       </TouchableOpacity>
-
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.reenviarContainer}
-        onPress={handleEnviarCodigo}
+        onPress={() => enviarCodigoParaEmail(email).then(() => {
+          Alert.alert('Código reenviado!', 'Verifique sua caixa de entrada ou spam.');
+        })}
       >
         <Text style={styles.reenviarText}>Não recebeu o código? </Text>
         <Text style={styles.reenviarLink}>Reenviar</Text>
@@ -243,11 +263,12 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
       <View style={styles.iconContainer}>
         <Icon name="lock" size={80} color="rgba(179, 103, 212, 0.84)" />
       </View>
-      <Text style={styles.stepTitle}>Nova senha</Text>
-      <Text style={styles.stepDescription}>
-        Crie uma nova senha forte e segura para sua conta.
+      <Text style={styles.stepTitle}>
+        {primeiroAcesso ? 'Criar sua senha' : 'Redefinir sua senha'}
       </Text>
-
+      <Text style={styles.stepDescription}>
+        Crie uma senha forte e segura para acessar o ApsiCare.
+      </Text>
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Nova senha</Text>
         <View style={styles.inputWrapper}>
@@ -270,14 +291,13 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Confirmar nova senha</Text>
+        <Text style={styles.inputLabel}>Confirmar senha</Text>
         <View style={styles.inputWrapper}>
           <Icon name="lock" size={20} color="#94A3B8" style={styles.inputIcon} />
           <TextInput
             style={styles.input}
-            placeholder="Confirme sua nova senha"
+            placeholder="Confirme sua senha"
             placeholderTextColor="#94A3B8"
             value={confirmarSenha}
             onChangeText={setConfirmarSenha}
@@ -286,16 +306,17 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           />
         </View>
       </View>
-
-      <TouchableOpacity 
-        style={styles.button} 
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleRedefinirSenha}
         disabled={loading}
       >
         {loading ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.buttonText}>Redefinir senha →</Text>
+          <Text style={styles.buttonText}>
+            {primeiroAcesso ? 'Criar senha →' : 'Redefinir senha →'}
+          </Text>
         )}
       </TouchableOpacity>
     </>
@@ -313,15 +334,20 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           <View style={styles.successIconContainer}>
             <Icon name="check-circle" size={80} color="#10B981" />
           </View>
-          <Text style={styles.modalTitle}>Senha redefinida!</Text>
-          <Text style={styles.modalDescription}>
-            Sua senha foi alterada com sucesso. Agora você pode fazer login com sua nova senha.
+          <Text style={styles.modalTitle}>
+            {primeiroAcesso ? 'Senha criada!' : 'Senha redefinida!'}
           </Text>
-          <TouchableOpacity 
+          <Text style={styles.modalDescription}>
+            {primeiroAcesso
+              ? 'Sua senha foi criada com sucesso. Agora você pode usar o app.'
+              : 'Sua senha foi redefinida com sucesso. Agora você pode fazer login.'
+            }
+          </Text>
+          <TouchableOpacity
             style={styles.modalButton}
             onPress={() => {
               setShowSuccessModal(false);
-              navigation.goBack();
+              navigation.replace('LoginPaciente');
             }}
           >
             <Text style={styles.modalButtonText}>Fazer login →</Text>
@@ -342,7 +368,6 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Efeito de fundo blur */}
           <View style={styles.blurBackground}>
             <View style={styles.blurCircle} />
           </View>
@@ -359,7 +384,7 @@ const RecuperarSenhaPaciente = ({ navigation }) => {
             </View>
             <Text style={styles.title}>ApsiCare</Text>
             <Text style={styles.subtitle}>
-              Plataforma clínica de saúde mental.
+              {primeiroAcesso ? 'Configure sua senha de acesso.' : 'Plataforma clínica de saúde mental.'}
             </Text>
           </View>
 

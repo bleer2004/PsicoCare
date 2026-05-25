@@ -52,6 +52,7 @@ export default function App() {
         <Stack.Screen name="MetasPaciente" component={MetasPaciente} options={{ headerShown: false }} />
         <Stack.Screen name="DiarioPaciente" component={DiarioPaciente} options={{ headerShown: false }} />
         <Stack.Screen name="PerfilPaciente" component={PerfilPaciente} options={{ headerShown: false }} />
+        <Stack.Screen name="RecuperarSenhaPaciente" component={RecuperarSenhaPaciente} options={{ headerShown: false }} />
 
       </Stack.Navigator>
     </NavigationContainer>

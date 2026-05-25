@@ -11,7 +11,7 @@ export const handler = async (event) => {
 
     // 1. Busca e valida o token de novo (por segurança)
     const tokenResult = await dynamo.send(new GetCommand({
-      TableName: "PsicoCare",
+      TableName: "ApsiCare",
       Key: { PK: `TOKEN#${code}`, SK: "RESET" }
     }));
 
@@ -25,7 +25,7 @@ export const handler = async (event) => {
 
     // 3. Atualiza o usuário e LIMPA o objeto 'data' antigo (Flat Pattern)
     await dynamo.send(new UpdateCommand({
-      TableName: "PsicoCare",
+      TableName: "ApsiCare",
       Key: { PK: `${token.userType}#${token.userId}`, SK: "PROFILE" },
       UpdateExpression: "SET passwordHash = :hash, updatedAt = :now REMOVE #old",
       ExpressionAttributeNames: { "#old": "data" },
@@ -34,7 +34,7 @@ export const handler = async (event) => {
 
     // 4. Invalida o token
     await dynamo.send(new UpdateCommand({
-      TableName: "PsicoCare",
+      TableName: "ApsiCare",
       Key: { PK: `TOKEN#${code}`, SK: "RESET" },
       UpdateExpression: "SET used = :true",
       ExpressionAttributeValues: { ":true": true }

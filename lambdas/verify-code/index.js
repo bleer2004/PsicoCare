@@ -9,7 +9,7 @@ export const handler = async (event) => {
     const { code } = JSON.parse(event.body);
 
     const result = await dynamo.send(new GetCommand({
-      TableName: "PsicoCare",
+      TableName: "ApsiCare",
       Key: { PK: `TOKEN#${code}`, SK: "RESET" }
     }));
 

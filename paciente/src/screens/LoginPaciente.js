@@ -42,7 +42,7 @@ const LoginPaciente = ({ navigation }) => {
   };
 
   const handleForgotPassword = () => {
-    navigation.navigate('RecuperarSenhaPaciente');
+    navigation.replace('RecuperarSenhaPaciente', { email, primeiroAcesso: true });
   };
 
   return (
@@ -108,7 +108,7 @@ const LoginPaciente = ({ navigation }) => {
 
               {/* Link Esqueci minha senha */}
               <TouchableOpacity style={styles.forgotPasswordContainer} onPress={handleForgotPassword}>
-                <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
+              <Text style={styles.forgotPasswordText}>Esqueci minha senha / Primeiro acesso</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>

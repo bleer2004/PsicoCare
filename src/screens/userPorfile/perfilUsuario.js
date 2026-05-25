@@ -95,12 +95,7 @@ const DashboardPaciente = ({ navigation, route }) => {
       id: '2',
       texto: 'Identificado padrão de piora do humor aos finais de semana',
       data: '15/05/2024',
-    },
-    {
-      id: '3',
-      texto: 'Melhora significativa quando mantém rotina de sono regular',
-      data: '10/05/2024',
-    },
+    }
   ]);
 
   // Lista de Lembretes Semanais
@@ -172,7 +167,6 @@ const DashboardPaciente = ({ navigation, route }) => {
 
   const [smartwatchData, setSmartwatchData] = useState({
     batimentos: 72,
-    qualidadeSono: 84,
     nivelStress: 'Baixo',
   });
 
@@ -451,13 +445,7 @@ const DashboardPaciente = ({ navigation, route }) => {
         color: (opacity = 1) => `rgba(179, 103, 212, ${opacity})`,
         strokeWidth: 2,
         legend: 'Humor (%)',
-      },
-      {
-        data: [70, 72, 68, 75, 78, 82, 84],
-        color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-        strokeWidth: 2,
-        legend: 'Sono (%)',
-      },
+      }
     ],
   };
 
@@ -512,12 +500,10 @@ const DashboardPaciente = ({ navigation, route }) => {
       <View style={styles.pacienteInfo}>
         <View style={styles.pacienteHeader}>
           <Text style={styles.pacienteNome}>{paciente.nome}</Text>
-          <View style={styles.idBadge}>
-            <Text style={styles.idText}>ID: {paciente.id}</Text>
-          </View>
         </View>
-        <Text style={styles.pacienteIdade}>{paciente.idade} anos</Text>
-        
+        <Text style={styles.pacienteIdade}>
+          {paciente.idade ? `${paciente.idade} anos` : 'Idade não informada'}
+        </Text>        
         <View style={styles.condicaoContainer}>
           <Text style={styles.condicaoLabel}>CONDIÇÃO</Text>
           <Text style={styles.condicaoValor}>{paciente.condicao}</Text>
@@ -539,7 +525,7 @@ const DashboardPaciente = ({ navigation, route }) => {
         <Text style={styles.diagnosticoCodigo}>{paciente.diagnosticoPrincipal}</Text>
         <Text style={styles.diagnosticoDescricao}>
           Paciente apresenta sintomas persistentes de preocupação excessiva, 
-          tensão muscular e distúrbios de sono há mais de 6 meses.
+          tensão muscular.
         </Text>
       </View>
 
@@ -547,7 +533,7 @@ const DashboardPaciente = ({ navigation, route }) => {
         <Text style={styles.cardTitle}>Resumo Clínico</Text>
         <Text style={styles.resumoTexto}>
           O paciente apresenta melhora nos episódios depressivos, com maior engajamento 
-          em atividades sociais. Sono permanece como fator crítico de oscilação emocional.
+          em atividades sociais.
         </Text>
         <View style={styles.tagsContainer}>
           <View style={styles.tag}>
@@ -571,12 +557,6 @@ const DashboardPaciente = ({ navigation, route }) => {
           </View>
           <View style={styles.smartwatchDivider} />
           <View style={styles.smartwatchItem}>
-            <Icon name="moon" size={24} color="#B367D4" />
-            <Text style={styles.smartwatchValue}>{smartwatchData.qualidadeSono}%</Text>
-            <Text style={styles.smartwatchLabel}>Qualidade Sono</Text>
-          </View>
-          <View style={styles.smartwatchDivider} />
-          <View style={styles.smartwatchItem}>
             <Icon name="zap" size={24} color="#10B981" />
             <Text style={[styles.smartwatchValue, { color: '#10B981' }]}>{smartwatchData.nivelStress}</Text>
             <Text style={styles.smartwatchLabel}>Nível de Stress</Text>
@@ -586,7 +566,7 @@ const DashboardPaciente = ({ navigation, route }) => {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Correlação Semanal</Text>
-        <Text style={styles.correlacaoSubtitle}>Humor vs Qualidade do Sono</Text>
+        <Text style={styles.correlacaoSubtitle}>Humor</Text>
         
         <LineChart
           data={correlacaoData}
@@ -607,7 +587,7 @@ const DashboardPaciente = ({ navigation, route }) => {
           }}
           bezier
           style={styles.chart}
-          legend={['Humor', 'Sono']}
+          legend={['Humor']}
           formatYLabel={(value) => `${value}%`}
         />
       </View>

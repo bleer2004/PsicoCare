@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const client = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(client);
-const TABLE_NAME = "PsicoCare";
+const TABLE_NAME = "ApsiCare";
 
 export const handler = async (event) => {
   try {

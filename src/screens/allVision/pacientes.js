@@ -85,7 +85,7 @@ const Pacientes = ({ navigation }) => {
           nome: p.name,
           ultimaSessao: p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : 'Sem sessão',
           status: p.isActive ? 'ativo' : 'inativo',
-          idade: calcularIdade(p.birthDate),
+          idade: p.birthDate ? calcularIdade(p.birthDate) : null, // null em vez de 0
           diagnosticoPrincipal: p.diagnostico || 'Aguardando diagnóstico',
           condicao: 'Em acompanhamento',
           statusEmocional: 'Estável',

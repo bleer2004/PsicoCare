@@ -169,27 +169,6 @@ const PerfilPaciente = ({ navigation }) => {
                   <View style={[styles.healthProgressFill, { width: '60%', backgroundColor: '#EF4444' }]} />
                 </View>
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.healthCard} onPress={handleVerResumo}>
-                <View style={styles.healthHeader}>
-                  <View style={[styles.healthIcon, { backgroundColor: '#EEF2FF' }]}>
-                    <Icon name="moon" size={18} color="#6366F1" />
-                  </View>
-                  <View>
-                    <Text style={styles.healthTitle}>Qualidade do sono</Text>
-                    <Text style={styles.healthSubtitle}>Você possui um sono pesado</Text>
-                  </View>
-                </View>
-                <View style={styles.sleepRow}>
-                  <View style={styles.sleepValueRow}>
-                    <Text style={styles.healthValue}>8.5</Text>
-                    <Text style={styles.healthUnit}>Hours</Text>
-                  </View>
-                  <View style={styles.excellentBadge}>
-                    <Text style={styles.excellentText}>Excellent</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
             </View>
 
             {/* Botão Sync */}

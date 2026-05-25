@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 const dynamoClient = new DynamoDBClient({ region: "sa-east-1" });
 const dynamo = DynamoDBDocumentClient.from(dynamoClient);
 const sesClient = new SESClient({ region: "sa-east-1" });
-const TABLE_NAME = "PsicoCare";
+const TABLE_NAME = "ApsiCare";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,7 +61,7 @@ export const handler = async (event) => {
       Source: process.env.SENDER_EMAIL,
       Destination: { ToAddresses: [email] },
       Message: {
-        Subject: { Data: "Código de Verificação - PsicoCare" },
+        Subject: { Data: "Código de Verificação - ApsiCare" },
         Body: { Html: { Data: htmlTemplate } }
       }
     }));
