@@ -10,9 +10,13 @@ import Icon from 'react-native-vector-icons/Feather';
 const DiarioPaciente = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [anotacao, setAnotacao] = useState('');
+  const [sonhos, setSonhos] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [breathingModalVisible, setBreathingModalVisible] = useState(false);
+  const [breathingStep, setBreathingStep] = useState(1);
   const [selectedAnotacao, setSelectedAnotacao] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [sharingId, setSharingId] = useState(null);
   const [anotacoes, setAnotacoes] = useState([]);
 
   const moods = [
@@ -25,7 +29,25 @@ const DiarioPaciente = ({ navigation }) => {
 
   useEffect(() => {
     carregarHistorico();
+    setBreathingModalVisible(true);
+    iniciarContagemRespiração();
   }, []);
+
+  const iniciarContagemRespiração = () => {
+    let step = 1;
+    const interval = setInterval(() => {
+      if (step < 5) {
+        step++;
+        setBreathingStep(step);
+      } else {
+        clearInterval(interval);
+        setTimeout(() => {
+          setBreathingModalVisible(false);
+        }, 500);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  };
 
   const carregarHistorico = async () => {
     try {
@@ -38,13 +60,16 @@ const DiarioPaciente = ({ navigation }) => {
       const data = await response.json();
       if (response.ok) {
         const formatados = (data.moods || [])
-          .filter(m => m.diaryText)
+          .filter(m => m.diaryText || m.dreamText)
           .map((m, i) => ({
             id: String(i),
             humor: m.contextTags?.[0] || 'neutral',
             titulo: `Se sentindo ${m.contextTags?.[0] || 'neutral'}`,
-            texto: m.diaryText,
+            texto: m.diaryText || '',
+            sonhos: m.dreamText || '',
             data: new Date(m.timestamp).toLocaleDateString('pt-BR'),
+            shared: m.sharedWithPsychologist || false,
+            moodId: m.id,
           }));
         setAnotacoes(formatados);
       }
@@ -60,8 +85,8 @@ const DiarioPaciente = ({ navigation }) => {
       Alert.alert('Atenção', 'Selecione como você está se sentindo');
       return;
     }
-    if (!anotacao.trim()) {
-      Alert.alert('Atenção', 'Escreva sua anotação');
+    if (!anotacao.trim() && !sonhos.trim()) {
+      Alert.alert('Atenção', 'Escreva sua anotação ou registre seus sonhos');
       return;
     }
 
@@ -80,12 +105,14 @@ const DiarioPaciente = ({ navigation }) => {
           arousalScore: mood.arousal,
           contextTags: [selectedMood],
           diaryText: anotacao,
+          dreamText: sonhos,
         })
       });
 
       if (response.ok) {
         setSelectedMood(null);
         setAnotacao('');
+        setSonhos('');
         Alert.alert('Sucesso', 'Anotação salva com sucesso!');
         await carregarHistorico();
       }
@@ -96,9 +123,132 @@ const DiarioPaciente = ({ navigation }) => {
     }
   };
 
+  const handleEnviarParaPsicologo = async (anotacaoItem) => {
+    Alert.alert(
+      'Enviar para psicólogo',
+      'Deseja compartilhar esta anotação com seu psicólogo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Enviar',
+          onPress: async () => {
+            setSharingId(anotacaoItem.id);
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const userStr = await AsyncStorage.getItem('user');
+              const user = JSON.parse(userStr);
+              
+              const response = await fetch(`${API_URL}/patients/${user.id}/moods/${anotacaoItem.moodId}/share`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ sharedWithPsychologist: true })
+              });
+
+              if (response.ok) {
+                Alert.alert('Sucesso', 'Anotação compartilhada com seu psicólogo!');
+                await carregarHistorico();
+              } else {
+                Alert.alert('Erro', 'Não foi possível compartilhar a anotação');
+              }
+            } catch (err) {
+              Alert.alert('Erro', 'Não foi possível compartilhar a anotação');
+            } finally {
+              setSharingId(null);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEnviarAnotacaoAtual = () => {
+    if (!anotacao.trim() && !sonhos.trim()) {
+      Alert.alert('Atenção', 'Escreva algo antes de enviar para o psicólogo');
+      return;
+    }
+    Alert.alert(
+      'Enviar para psicólogo',
+      'Deseja compartilhar esta anotação com seu psicólogo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Enviar', onPress: () => handleSalvarComPartilha() }
+      ]
+    );
+  };
+
+  const handleSalvarComPartilha = async () => {
+    if (!selectedMood) {
+      Alert.alert('Atenção', 'Selecione como você está se sentindo');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      const mood = moods.find(m => m.id === selectedMood);
+
+      const response = await fetch(`${API_URL}/patients/${user.id}/moods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          valenceScore: mood.valence,
+          arousalScore: mood.arousal,
+          contextTags: [selectedMood],
+          diaryText: anotacao,
+          dreamText: sonhos,
+          sharedWithPsychologist: true,
+        })
+      });
+
+      if (response.ok) {
+        setSelectedMood(null);
+        setAnotacao('');
+        setSonhos('');
+        Alert.alert('Sucesso', 'Anotação salva e compartilhada com seu psicólogo!');
+        await carregarHistorico();
+      }
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível salvar a anotação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderBreathingModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={breathingModalVisible}
+      onRequestClose={() => setBreathingModalVisible(false)}
+    >
+      <View style={styles.breathingOverlay}>
+        <View style={styles.breathingContainer}>
+          <View style={styles.breathingCircle}>
+            <Text style={styles.breathingNumber}>{breathingStep}</Text>
+          </View>
+          <Text style={styles.breathingTitle}>Respire fundo...</Text>
+          <Text style={styles.breathingSubtitle}>
+            Inspire e expire lentamente enquanto escreve o que vem à sua mente
+          </Text>
+          <TouchableOpacity 
+            style={styles.breathingSkipButton} 
+            onPress={() => setBreathingModalVisible(false)}
+          >
+            <Text style={styles.breathingSkipText}>Pular</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F6F8" />
+      
+      {renderBreathingModal()}
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -108,6 +258,7 @@ const DiarioPaciente = ({ navigation }) => {
           <View style={styles.headerPlaceholder} />
         </View>
 
+        {/* Seção de Humor */}
         <View style={styles.moodSection}>
           <Text style={styles.moodTitle}>Como você está se sentindo hoje?</Text>
           <View style={styles.moodContainer}>
@@ -126,7 +277,12 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Seção de Anotação Diária */}
         <View style={styles.anotacaoSection}>
+          <View style={styles.sectionLabelContainer}>
+            <Icon name="edit-2" size={16} color="#B367D4" />
+            <Text style={styles.sectionLabel}>Anotações do dia</Text>
+          </View>
           <View style={styles.anotacaoContainer}>
             <TextInput
               style={styles.anotacaoInput}
@@ -140,10 +296,38 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSalvar} disabled={loading}>
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveButtonText}>Salvar</Text>}
-        </TouchableOpacity>
+        {/* Seção de Anotação de Sonhos */}
+        <View style={styles.dreamsSection}>
+          <View style={styles.sectionLabelContainer}>
+            <Icon name="moon" size={16} color="#B367D4" />
+            <Text style={styles.sectionLabel}>Anotar sonhos</Text>
+          </View>
+          <View style={styles.dreamsContainer}>
+            <TextInput
+              style={styles.dreamsInput}
+              placeholder="Registre seus sonhos, mesmo que pareçam desconexos..."
+              placeholderTextColor="#94A3B8"
+              multiline
+              value={sonhos}
+              onChangeText={setSonhos}
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
 
+        {/* Botões de ação */}
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSalvar} disabled={loading}>
+            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveButtonText}>Salvar</Text>}
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.shareButton} onPress={handleEnviarAnotacaoAtual} disabled={loading}>
+            <Icon name="send" size={18} color="#FFFFFF" />
+            <Text style={styles.shareButtonText}>Enviar ao psicólogo</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Histórico de Anotações */}
         <View style={styles.recentSection}>
           <Text style={styles.recentTitle}>Anotações recentes</Text>
           {anotacoes.length === 0 ? (
@@ -153,7 +337,11 @@ const DiarioPaciente = ({ navigation }) => {
             </View>
           ) : (
             anotacoes.map((item) => (
-              <TouchableOpacity key={item.id} style={styles.anotacaoCard} onPress={() => { setSelectedAnotacao(item); setModalVisible(true); }}>
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.anotacaoCard} 
+                onPress={() => { setSelectedAnotacao(item); setModalVisible(true); }}
+              >
                 <View style={styles.cardHeader}>
                   <View style={styles.cardHeaderLeft}>
                     <Text style={styles.cardEmoji}>{getMoodEmoji(item.humor)}</Text>
@@ -162,14 +350,48 @@ const DiarioPaciente = ({ navigation }) => {
                       <Text style={styles.cardDate}>{item.data}</Text>
                     </View>
                   </View>
+                  {!item.shared && (item.texto || item.sonhos) && (
+                    <TouchableOpacity 
+                      style={styles.shareIconButton} 
+                      onPress={() => handleEnviarParaPsicologo(item)}
+                      disabled={sharingId === item.id}
+                    >
+                      {sharingId === item.id ? (
+                        <ActivityIndicator size="small" color="#B367D4" />
+                      ) : (
+                        <Icon name="send" size={16} color="#B367D4" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  {item.shared && (
+                    <View style={styles.sharedBadge}>
+                      <Icon name="check-circle" size={12} color="#10B981" />
+                      <Text style={styles.sharedText}>Compartilhado</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.cardText} numberOfLines={2}>{item.texto}</Text>
+                
+                {/* Anotações diárias */}
+                {item.texto && (
+                  <Text style={styles.cardText} numberOfLines={2}>{item.texto}</Text>
+                )}
+                
+                {/* Sonhos - com azul mais claro */}
+                {item.sonhos && (
+                  <View style={styles.dreamsPreview}>
+                    <Icon name="moon" size={14} color="#3B82F6" />
+                    <Text style={styles.dreamsPreviewText} numberOfLines={2}>
+                      {item.sonhos}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             ))
           )}
         </View>
       </ScrollView>
 
+      {/* Modal de Detalhes da Anotação */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -186,13 +408,40 @@ const DiarioPaciente = ({ navigation }) => {
                   <Text style={styles.modalMoodText}>{selectedAnotacao.titulo}</Text>
                 </View>
                 <Text style={styles.modalDate}>{selectedAnotacao.data}</Text>
-                <Text style={styles.modalText}>{selectedAnotacao.texto}</Text>
+                
+                {selectedAnotacao.texto && (
+                  <>
+                    <Text style={styles.modalSubtitle}>📝 Anotações</Text>
+                    <Text style={styles.modalText}>{selectedAnotacao.texto}</Text>
+                  </>
+                )}
+                
+                {selectedAnotacao.sonhos && (
+                  <>
+                    <Text style={[styles.modalSubtitle, styles.modalSubtitleDream]}>🌙 Sonhos</Text>
+                    <Text style={[styles.modalText, styles.modalTextDream]}>{selectedAnotacao.sonhos}</Text>
+                  </>
+                )}
+                
+                {!selectedAnotacao.shared && (selectedAnotacao.texto || selectedAnotacao.sonhos) && (
+                  <TouchableOpacity 
+                    style={styles.modalPsychButton} 
+                    onPress={() => {
+                      handleEnviarParaPsicologo(selectedAnotacao);
+                      setModalVisible(false);
+                    }}
+                  >
+                    <Icon name="send" size={18} color="#B367D4" />
+                    <Text style={styles.modalPsychText}>Compartilhar com psicólogo</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </View>
         </View>
       </Modal>
 
+      {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('HomePaciente')}>
           <Icon name="home" size={20} color="#94A3B8" />
@@ -305,6 +554,19 @@ const styles = StyleSheet.create({
     color: '#475569',
     lineHeight: 16,
   },
+  sectionLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#0F172A',
+    lineHeight: 20,
+  },
   anotacaoSection: {
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -327,12 +589,39 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     minHeight: 150,
   },
+  dreamsSection: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  dreamsContainer: {
+    minHeight: 140,
+    backgroundColor: '#1E1B4B',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    padding: 16,
+  },
+  dreamsInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#FFFFFF',
+    lineHeight: 24,
+    textAlignVertical: 'top',
+    minHeight: 110,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: '#B367D4',
     borderRadius: 12,
     paddingVertical: 16,
-    marginHorizontal: 16,
-    marginBottom: 24,
     alignItems: 'center',
     shadowColor: '#2B6CEE',
     shadowOffset: { width: 0, height: 4 },
@@ -342,6 +631,28 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 24,
+  },
+  shareButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 16,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  shareButtonText: {
+    fontSize: 14,
     fontFamily: 'Manrope',
     fontWeight: '700',
     color: '#FFFFFF',
@@ -402,22 +713,25 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     letterSpacing: 0.5,
   },
-  cardActions: {
-    flexDirection: 'row',
+  shareIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(179, 103, 212, 0.10)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
   sharedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#D1FAE5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
     gap: 4,
   },
   sharedText: {
-    fontSize: 8,
+    fontSize: 10,
     fontFamily: 'Manrope',
     fontWeight: '500',
     color: '#10B981',
@@ -429,16 +743,93 @@ const styles = StyleSheet.create({
     color: '#475569',
     lineHeight: 20,
   },
-  historyButton: {
-    paddingVertical: 8,
+  // ESTILOS DOS SONHOS - AZUL MAIS CLARO
+  dreamsPreview: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E7FF',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    padding: 10,
   },
-  historyButtonText: {
+  dreamsPreviewText: {
+    fontSize: 13,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#2563EB',
+    flex: 1,
+    lineHeight: 18,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
     fontSize: 14,
     fontFamily: 'Manrope',
-    fontWeight: '600',
+    fontWeight: '500',
+    color: '#94A3B8',
+    marginTop: 12,
+  },
+  breathingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  breathingContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  breathingCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(179, 103, 212, 0.20)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+    borderWidth: 2,
+    borderColor: '#B367D4',
+  },
+  breathingNumber: {
+    fontSize: 48,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
     color: '#B367D4',
-    lineHeight: 20,
+  },
+  breathingTitle: {
+    fontSize: 24,
+    fontFamily: 'Manrope',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  breathingSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  breathingSkipButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  breathingSkipText: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
@@ -490,43 +881,40 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginBottom: 16,
   },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  modalSubtitleDream: {
+    color: '#2563EB',
+  },
   modalText: {
     fontSize: 16,
     fontFamily: 'Manrope',
     fontWeight: '400',
     color: '#4B5563',
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalShareButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#B367D4',
+  modalTextDream: {
+    color: '#1D4ED8',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
     borderRadius: 12,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  modalShareText: {
-    fontSize: 14,
-    fontFamily: 'Manrope',
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   modalPsychButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingVertical: 12,
-    gap: 8,
+    marginTop: 16,
   },
   modalPsychText: {
     fontSize: 14,

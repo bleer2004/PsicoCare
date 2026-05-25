@@ -88,16 +88,24 @@ const HomePaciente = ({ navigation }) => {
     }
   };
 
+  // Gráfico corrigido - com largura adequada para não cortar
+  const chartWidth = screenWidth - 60;
+  
   const chartData = {
     labels: moodHistory.length > 0
-      ? moodHistory.slice(0, 7).reverse().map((_, i) => ['D', 'T', 'Q', 'Q', 'S', 'S', 'D'][i])
+      ? moodHistory.slice(0, 7).reverse().map((_, i) => {
+          const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+          return dias[i] || '';
+        })
       : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
     datasets: [{
       data: moodHistory.length > 0
         ? moodHistory.slice(0, 7).reverse().map(m => m.emotionalScore || 50)
         : [42, 74, 53, 95, 68, 47, 21],
       color: (opacity = 1) => `rgba(179, 103, 212, ${opacity})`,
+      strokeWidth: 2,
     }],
+    legend: ['Nível Emocional'],
   };
 
   const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
@@ -169,6 +177,18 @@ const HomePaciente = ({ navigation }) => {
           <Text style={styles.emergencyButtonText}>Ligar para emergência</Text>
         </TouchableOpacity>
 
+        {/* NOVO BOTÃO: ANOTAR SONHOS - TEMA NOITE/SONHOS */}
+        <TouchableOpacity style={styles.dreamsCard} onPress={() => navigation.navigate('DiarioSonhosPaciente')}>
+          <View style={styles.dreamsIconWrapper}>
+            <Icon name="moon" size={24} color="#FFFFFF" />
+          </View>
+          <View style={styles.dreamsTextContainer}>
+            <Text style={styles.dreamsTitle}>Anotar sonhos</Text>
+            <Text style={styles.dreamsSubtitle}>Registre seus sonhos e explore significados</Text>
+          </View>
+          <Icon name="chevron-right" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.notesCard} onPress={() => navigation.navigate('DiarioPaciente')}>
           <View style={styles.notesIconWrapper}>
             <Icon name="edit-2" size={18} color="#B367D4" />
@@ -188,13 +208,14 @@ const HomePaciente = ({ navigation }) => {
           <Text style={styles.goalsSubtitle}>Veja as metas definidas pelo seu psicólogo</Text>
         </TouchableOpacity>
 
+        {/* GRÁFICO CORRIGIDO */}
         <View style={styles.chartSection}>
           <Text style={styles.sectionTitle}>Histórico emocional</Text>
           <View style={styles.chartContainer}>
             <LineChart
               data={chartData}
-              width={screenWidth - 80}
-              height={140}
+              width={chartWidth}
+              height={200}
               chartConfig={{
                 backgroundColor: '#FFFFFF',
                 backgroundGradientFrom: '#FFFFFF',
@@ -203,11 +224,18 @@ const HomePaciente = ({ navigation }) => {
                 color: (opacity = 1) => `rgba(179, 103, 212, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
                 style: { borderRadius: 16 },
-                propsForDots: { r: '4', strokeWidth: '2', stroke: '#B367D4' },
+                propsForDots: { r: '5', strokeWidth: '2', stroke: '#B367D4' },
+                propsForBackgroundLines: { strokeDasharray: '', stroke: '#E2E8F0' },
               }}
               bezier
               style={styles.chart}
+              formatYLabel={(value) => `${value}%`}
+              fromZero
             />
+            <View style={styles.chartLegend}>
+              <View style={styles.chartLegendDot} />
+              <Text style={styles.chartLegendText}>Nível de bem-estar emocional</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -289,6 +317,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#E2E8F0',
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarImage: {
     width: '100%',
@@ -416,86 +446,49 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
   },
-  ideaSection: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  ideaCard: {
-    backgroundColor: '#B367D4',
-    borderRadius: 24,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#2B6CEE',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 5,
-  },
-  ideaBlur: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 128,
-    height: 128,
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
-    borderRadius: 64,
-  },
-  ideaContent: {
-    padding: 24,
-  },
-  ideaHeader: {
+  // NOVOS ESTILOS PARA O CARD DE SONHOS
+  dreamsCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#1E1B4B',
+    borderRadius: 24,
+    padding: 20,
+    marginHorizontal: 16,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  ideaAvatarContainer: {
+  dreamsIconWrapper: {
+    width: 52,
+    height: 52,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
-  ideaAvatarBorder: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.30)',
-    overflow: 'hidden',
-  },
-  ideaAvatar: {
-    width: '100%',
-    height: '100%',
-  },
-  ideaTextContainer: {
+  dreamsTextContainer: {
     flex: 1,
   },
-  ideaDoctorName: {
+  dreamsTitle: {
     fontSize: 18,
     fontFamily: 'Manrope',
     fontWeight: '700',
     color: '#FFFFFF',
-    lineHeight: 28,
-    marginBottom: 4,
+    lineHeight: 24,
   },
-  ideaQuote: {
-    fontSize: 14,
-    fontFamily: 'Manrope',
-    fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.80)',
-    lineHeight: 20,
-  },
-  ideaTimeContainer: {
-    alignItems: 'flex-start',
-  },
-  ideaTimeBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.20)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  ideaTimeText: {
+  dreamsSubtitle: {
     fontSize: 12,
     fontFamily: 'Manrope',
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 16,
+    marginTop: 4,
   },
   notesCard: {
     flexDirection: 'row',
@@ -567,56 +560,12 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     lineHeight: 24,
   },
-  goalsPercentage: {
+  goalsSubtitle: {
     fontSize: 12,
     fontFamily: 'Manrope',
-    fontWeight: '700',
-    color: '#B367D4',
-    lineHeight: 16,
-  },
-  goalsList: {
-    marginBottom: 16,
-  },
-  goalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  goalCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(43, 108, 238, 0.30)',
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  goalCheckboxActive: {
-    backgroundColor: '#B367D4',
-    borderColor: '#B367D4',
-  },
-  goalText: {
-    fontSize: 14,
-    fontFamily: 'Manrope',
     fontWeight: '400',
-    color: '#1E293B',
-    lineHeight: 20,
-  },
-  goalTextCompleted: {
-    color: '#475569',
-    textDecorationLine: 'line-through',
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#B367D4',
-    borderRadius: 20,
+    color: '#64748B',
+    lineHeight: 16,
   },
   chartSection: {
     paddingHorizontal: 16,
@@ -636,8 +585,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chart: {
-    marginLeft: -25,
+    marginLeft: -30,
     borderRadius: 16,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    alignSelf: 'flex-start',
+  },
+  chartLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#B367D4',
+    marginRight: 8,
+  },
+  chartLegendText: {
+    fontSize: 11,
+    fontFamily: 'Manrope',
+    fontWeight: '500',
+    color: '#64748B',
   },
   bottomNavigation: {
     flexDirection: 'row',
@@ -668,7 +636,6 @@ const styles = StyleSheet.create({
     color: '#B367D4',
     fontWeight: '700',
   },
-  // Estilos do Modal de Notificações
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

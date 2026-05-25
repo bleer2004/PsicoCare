@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/Feather';
 const MetasPaciente = ({ navigation }) => {
   const [metasList, setMetasList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
     carregarMetas();
@@ -24,7 +25,13 @@ const MetasPaciente = ({ navigation }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      if (response.ok) setMetasList(data.goals || []);
+      if (response.ok) {
+        const metasComAtraso = (data.goals || []).map(meta => ({
+          ...meta,
+          isOverdue: verificarAtraso(meta.prazo, meta.status)
+        }));
+        setMetasList(metasComAtraso);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -32,20 +39,133 @@ const MetasPaciente = ({ navigation }) => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const verificarAtraso = (prazo, status) => {
+    if (!prazo || prazo === 'Sem prazo definido') return false;
+    if (status === 'concluido') return false;
+    
+    const partes = prazo.split('/');
+    if (partes.length !== 3) return false;
+    
+    const dataPrazo = new Date(partes[2], partes[1] - 1, partes[0]);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    return dataPrazo < hoje;
+  };
+
+  const atualizarStatusMeta = async (metaId, novoStatus) => {
+    setUpdatingId(metaId);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const userStr = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userStr);
+      
+      let progressoTexto = '';
+      if (novoStatus === 'concluido') progressoTexto = 'Concluído!';
+      else if (novoStatus === 'andamento') progressoTexto = 'Em andamento';
+      else progressoTexto = 'Não iniciada';
+      
+      const response = await fetch(`${API_URL}/patients/${user.id}/goals/${metaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ status: novoStatus, progresso: progressoTexto })
+      });
+      
+      if (response.ok) {
+        await carregarMetas();
+        Alert.alert('Sucesso', `Meta ${novoStatus === 'concluido' ? 'concluída' : 'iniciada'} com sucesso!`);
+      } else {
+        Alert.alert('Erro', 'Não foi possível atualizar a meta');
+      }
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível atualizar a meta');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const getStatusColor = (status, isOverdue) => {
     if (status === 'concluido') return '#22C55E';
     if (status === 'andamento') return '#F59E0B';
+    if (isOverdue && status !== 'concluido') return '#EF4444';
     return '#B367D4';
   };
 
-  const getStatusLabel = (status) => {
-    if (status === 'concluido') return 'Concluído';
-    if (status === 'andamento') return 'Em andamento';
-    return 'Nova';
+  const getStatusLabel = (status, isOverdue) => {
+    if (status === 'concluido') return 'Concluída';
+    if (status === 'andamento') return 'Em progresso';
+    if (isOverdue) return 'Em atraso';
+    return 'Ativa';
   };
 
-  const metasAtivas = metasList.filter(m => m.status !== 'concluido');
+  const metasAtivas = metasList.filter(m => m.status !== 'concluido' && m.status !== 'andamento' && !m.isOverdue);
+  const metasEmProgresso = metasList.filter(m => m.status === 'andamento' && !m.isOverdue);
+  const metasEmAtraso = metasList.filter(m => m.isOverdue && m.status !== 'concluido');
   const metasConcluidas = metasList.filter(m => m.status === 'concluido');
+
+  const renderMetaCard = (meta, showActions = true) => {
+    const isOverdue = meta.isOverdue;
+    const statusColor = getStatusColor(meta.status, isOverdue);
+    const statusLabel = getStatusLabel(meta.status, isOverdue);
+    const isUpdating = updatingId === meta.id;
+    
+    return (
+      <View key={meta.id} style={[styles.metaCard, isOverdue && styles.metaOverdue, meta.status === 'concluido' && styles.metaCompleted]}>
+        <View style={styles.metaHeader}>
+          <View style={styles.metaInfo}>
+            <View style={[styles.metaCategoryBadge, { backgroundColor: statusColor + '20' }]}>
+              <Text style={[styles.metaCategoryText, { color: statusColor }]}>
+                {statusLabel}
+              </Text>
+            </View>
+            <Text style={[styles.metaTitle, meta.status === 'concluido' && styles.metaTitleCompleted]}>{meta.titulo}</Text>
+            <Text style={styles.metaDescription}>{meta.progresso || 'Meta cadastrada'}</Text>
+            {meta.prazo && meta.prazo !== 'Sem prazo definido' && (
+              <View style={[styles.prazoRow, isOverdue && styles.prazoRowOverdue]}>
+                <Icon name="calendar" size={12} color={isOverdue ? '#EF4444' : '#94A3B8'} />
+                <Text style={[styles.prazoText, isOverdue && styles.prazoTextOverdue]}>
+                  Prazo: {meta.prazo} {isOverdue && '(Atrasada)'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+        
+        {showActions && meta.status !== 'concluido' && (
+          <View style={styles.metaActions}>
+            {meta.status !== 'andamento' && (
+              <TouchableOpacity 
+                style={[styles.actionButton, isOverdue ? styles.overdueButton : styles.startButton]} 
+                onPress={() => atualizarStatusMeta(meta.id, 'andamento')}
+                disabled={isUpdating}
+              >
+                {isUpdating ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
+                  <Text style={styles.actionButtonText}>
+                    {isOverdue ? 'Iniciar mesmo assim' : 'Iniciar'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+            {meta.status === 'andamento' && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.completeButton]} 
+                onPress={() => atualizarStatusMeta(meta.id, 'concluido')}
+                disabled={isUpdating}
+              >
+                {isUpdating ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.actionButtonText}>Concluir</Text>}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        
+        {meta.status === 'concluido' && (
+          <View style={styles.completedIconContainer}>
+            <Icon name="check-circle" size={24} color="#22C55E" />
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,10 +191,17 @@ const MetasPaciente = ({ navigation }) => {
           </View>
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
-              <View style={[styles.statDot, { backgroundColor: '#B367D4' }]} />
-              <Text style={styles.statTitle}>Ativas</Text>
+              <View style={[styles.statDot, { backgroundColor: '#F59E0B' }]} />
+              <Text style={styles.statTitle}>Em progresso</Text>
             </View>
-            <Text style={styles.statNumber}>{metasAtivas.length}</Text>
+            <Text style={styles.statNumber}>{metasEmProgresso.length}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={styles.statHeader}>
+              <View style={[styles.statDot, { backgroundColor: '#EF4444' }]} />
+              <Text style={styles.statTitle}>Em atraso</Text>
+            </View>
+            <Text style={styles.statNumber}>{metasEmAtraso.length}</Text>
           </View>
         </View>
 
@@ -89,52 +216,31 @@ const MetasPaciente = ({ navigation }) => {
             </View>
           ) : (
             <>
-              {metasAtivas.length > 0 && (
+              {metasEmAtraso.length > 0 && (
                 <>
-                  <Text style={styles.sectionTitle}>Metas ativas</Text>
-                  {metasAtivas.map((meta) => (
-                    <View key={meta.id} style={styles.metaCard}>
-                      <View style={styles.metaHeader}>
-                        <View style={styles.metaInfo}>
-                          <View style={[styles.metaCategoryBadge, { backgroundColor: getStatusColor(meta.status) + '20' }]}>
-                            <Text style={[styles.metaCategoryText, { color: getStatusColor(meta.status) }]}>
-                              {getStatusLabel(meta.status)}
-                            </Text>
-                          </View>
-                          <Text style={styles.metaTitle}>{meta.titulo}</Text>
-                          <Text style={styles.metaDescription}>{meta.progresso}</Text>
-                          {meta.prazo && meta.prazo !== 'Sem prazo definido' && (
-                            <View style={styles.prazoRow}>
-                              <Icon name="calendar" size={12} color="#94A3B8" />
-                              <Text style={styles.prazoText}>Prazo: {meta.prazo}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-                  ))}
+                  <Text style={styles.sectionTitle}>⚠️ Em atraso</Text>
+                  {metasEmAtraso.map(meta => renderMetaCard(meta, true))}
                 </>
               )}
-
+              
+              {metasAtivas.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>📌 Ativas</Text>
+                  {metasAtivas.map(meta => renderMetaCard(meta, true))}
+                </>
+              )}
+              
+              {metasEmProgresso.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>⚡ Em progresso</Text>
+                  {metasEmProgresso.map(meta => renderMetaCard(meta, true))}
+                </>
+              )}
+              
               {metasConcluidas.length > 0 && (
                 <>
-                  <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Concluídas</Text>
-                  {metasConcluidas.map((meta) => (
-                    <View key={meta.id} style={[styles.metaCard, styles.metaCompleted]}>
-                      <View style={styles.metaHeader}>
-                        <View style={styles.metaInfo}>
-                          <View style={styles.completedBadge}>
-                            <Icon name="check-circle" size={12} color="#22C55E" />
-                            <Text style={styles.completedText}>Concluído</Text>
-                          </View>
-                          <Text style={[styles.metaTitle, styles.metaTitleCompleted]}>{meta.titulo}</Text>
-                        </View>
-                        <View style={styles.completedIconContainer}>
-                          <Icon name="check" size={20} color="#FFFFFF" />
-                        </View>
-                      </View>
-                    </View>
-                  ))}
+                  <Text style={styles.sectionTitle}>✅ Concluídas</Text>
+                  {metasConcluidas.map(meta => renderMetaCard(meta, false))}
                 </>
               )}
             </>
@@ -147,13 +253,13 @@ const MetasPaciente = ({ navigation }) => {
           <Icon name="home" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-          <Icon name="target" size={20} color="#B367D4" />
-          <Text style={[styles.navText, styles.navTextActive]}>Metas</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('DiarioPaciente')}>
           <Icon name="book-open" size={20} color="#94A3B8" />
           <Text style={styles.navText}>Diário</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+          <Icon name="target" size={20} color="#B367D4" />
+          <Text style={[styles.navText, styles.navTextActive]}>Metas</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('PerfilPaciente')}>
           <Icon name="user" size={20} color="#94A3B8" />
@@ -182,7 +288,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     backgroundColor: 'rgba(246, 246, 248, 0.80)',
-    backdropFilter: 'blur(6px)',
   },
   headerBackButton: {
     width: 40,
@@ -202,209 +307,78 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     lineHeight: 22.5,
   },
-  headerAddButton: {
-    width: 40,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  addButtonInner: {
-    width: 40,
-    height: 40,
-    backgroundColor: 'rgba(43, 108, 238, 0.10)',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileSection: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatarRing: {
-    width: 128,
-    height: 128,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  avatarInnerRing: {
-    width: 116,
-    height: 116,
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    borderWidth: 8,
-    borderColor: '#E2E8F0',
-    borderRadius: 58,
-  },
-  avatarImageContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 128,
-    height: 128,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 4,
-    borderColor: '#F6F6F8',
-  },
-  levelBadge: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: '#FACC15',
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 2,
-    borderColor: '#F6F6F8',
-  },
-  levelText: {
-    fontSize: 10,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
-    color: '#0F172A',
-    lineHeight: 15,
-  },
-  congratsContainer: {
-    alignItems: 'center',
-  },
-  congratsTitle: {
-    fontSize: 24,
-    fontFamily: 'Manrope',
-    fontWeight: '800',
-    color: '#0F172A',
-    lineHeight: 32,
-    textAlign: 'center',
-  },
-  congratsSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Manrope',
-    fontWeight: '500',
-    color: '#64748B',
-    lineHeight: 20,
-    textAlign: 'center',
-    marginTop: 4,
-  },
   statsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 24,
-    gap: 16,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 24,
   },
   statCard: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#F2EEF6',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(43, 108, 238, 0.10)',
-  },
-  statHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  statDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  statTitle: {
-    fontSize: 12,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    color: '#64748B',
-    lineHeight: 16,
-    letterSpacing: 0.6,
-  },
-  statValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontFamily: 'Manrope',
-    fontWeight: '900',
-    color: '#0F172A',
-    lineHeight: 32,
-  },
-  statTrend: {
-    fontSize: 12,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
-    lineHeight: 16,
-  },
-  tabsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  tabsInner: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(226, 232, 240, 0.50)',
-    borderRadius: 8,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  tabActive: {
+    padding: 14,
     backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  tabText: {
-    fontSize: 14,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
-    color: '#64748B',
-    lineHeight: 20,
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
   },
-  tabTextActive: {
-    color: '#B367D4',
+  statDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  statTitle: {
+    fontSize: 11,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#64748B',
+    lineHeight: 15,
+  },
+  statNumber: {
+    fontSize: 28,
+    fontFamily: 'Manrope',
+    fontWeight: '800',
+    color: '#0F172A',
+    lineHeight: 36,
   },
   metasContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     gap: 16,
   },
   sectionTitle: {
     fontSize: 14,
     fontFamily: 'Manrope',
     fontWeight: '700',
-    textTransform: 'uppercase',
-    color: '#94A3B8',
+    color: '#64748B',
     lineHeight: 20,
-    letterSpacing: 1.4,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   metaCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    position: 'relative',
+  },
+  metaOverdue: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   metaCompleted: {
     backgroundColor: '#F0FDF4',
@@ -417,13 +391,12 @@ const styles = StyleSheet.create({
   },
   metaInfo: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   metaCategoryBadge: {
-    backgroundColor: 'rgba(43, 108, 238, 0.10)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
     alignSelf: 'flex-start',
   },
   metaCategoryText: {
@@ -431,14 +404,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope',
     fontWeight: '700',
     textTransform: 'uppercase',
-    lineHeight: 15,
+    lineHeight: 14,
   },
   metaTitle: {
     fontSize: 16,
     fontFamily: 'Manrope',
     fontWeight: '700',
     color: '#0F172A',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   metaTitleCompleted: {
     textDecorationLine: 'line-through',
@@ -451,83 +424,82 @@ const styles = StyleSheet.create({
     color: '#64748B',
     lineHeight: 16,
   },
-  metaMenuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressContainer: {
-    marginTop: 8,
-    gap: 4,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressLabel: {
-    fontSize: 10,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
-    color: '#94A3B8',
-    lineHeight: 15,
-  },
-  progressValue: {
-    fontSize: 10,
-    fontFamily: 'Manrope',
-    fontWeight: '700',
-    color: '#94A3B8',
-    lineHeight: 15,
-  },
-  progressBarContainer: {
-    height: 6,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 10,
-  },
-  completedBadge: {
+  prazoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    marginTop: 4,
   },
-  completedText: {
-    fontSize: 10,
+  prazoRowOverdue: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  prazoText: {
+    fontSize: 11,
     fontFamily: 'Manrope',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    color: '#16A34A',
-    lineHeight: 15,
+    fontWeight: '500',
+    color: '#94A3B8',
   },
-  completedIconContainer: {
-    width: 40,
-    height: 40,
+  prazoTextOverdue: {
+    color: '#DC2626',
+  },
+  metaActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  startButton: {
+    backgroundColor: '#B367D4',
+  },
+  completeButton: {
     backgroundColor: '#22C55E',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
   },
-  historyButton: {
-    paddingVertical: 8,
-    alignItems: 'center',
+  overdueButton: {
+    backgroundColor: '#EF4444',
   },
-  historyButtonText: {
-    fontSize: 14,
+  actionButtonText: {
+    fontSize: 13,
     fontFamily: 'Manrope',
     fontWeight: '600',
-    color: '#B367D4',
-    lineHeight: 20,
+    color: '#FFFFFF',
+  },
+  completedIconContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: 'Manrope',
+    fontWeight: '600',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: 'Manrope',
+    fontWeight: '400',
+    color: '#64748B',
     textAlign: 'center',
+    paddingHorizontal: 40,
   },
   bottomNavigation: {
     flexDirection: 'row',
