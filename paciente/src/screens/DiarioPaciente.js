@@ -107,7 +107,7 @@ const DiarioPaciente = ({ navigation }) => {
       return;
     }
     if (!anotacao.trim() && !sonhos.trim()) {
-      Alert.alert('Atenção', 'Escreva sua anotação ou registre seus sonhos');
+      Alert.alert('Atenção', 'Selecione como você está se sentindo');
       return;
     }
 
@@ -396,24 +396,7 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Seção de Anotação de Sonhos */}
-        <View style={styles.dreamsSection}>
-          <View style={styles.sectionLabelContainer}>
-            <Icon name="moon" size={16} color="#B367D4" />
-            <Text style={styles.sectionLabel}>Anotar sonhos</Text>
-          </View>
-          <View style={styles.dreamsContainer}>
-            <TextInput
-              style={styles.dreamsInput}
-              placeholder="Registre seus sonhos, mesmo que pareçam desconexos..."
-              placeholderTextColor="#94A3B8"
-              multiline
-              value={sonhos}
-              onChangeText={setSonhos}
-              textAlignVertical="top"
-            />
-          </View>
-        </View>
+        
 
         {/* Botões de ação */}
         <View style={styles.buttonsRow}>
@@ -492,15 +475,7 @@ const DiarioPaciente = ({ navigation }) => {
                   <Text style={styles.cardText} numberOfLines={2}>{item.texto}</Text>
                 )}
                 
-                {/* Sonhos - com azul mais claro */}
-                {item.sonhos && (
-                  <View style={styles.dreamsPreview}>
-                    <Icon name="moon" size={14} color="#3B82F6" />
-                    <Text style={styles.dreamsPreviewText} numberOfLines={2}>
-                      {item.sonhos}
-                    </Text>
-                  </View>
-                )}
+                
               </TouchableOpacity>
             ))
           )}

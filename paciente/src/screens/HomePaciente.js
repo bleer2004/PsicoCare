@@ -177,18 +177,6 @@ const HomePaciente = ({ navigation }) => {
           <Text style={styles.emergencyButtonText}>Ligar para emergência</Text>
         </TouchableOpacity>
 
-        {/* NOVO BOTÃO: ANOTAR SONHOS - TEMA NOITE/SONHOS */}
-        <TouchableOpacity style={styles.dreamsCard} onPress={() => navigation.navigate('DiarioSonhosPaciente')}>
-          <View style={styles.dreamsIconWrapper}>
-            <Icon name="moon" size={24} color="#FFFFFF" />
-          </View>
-          <View style={styles.dreamsTextContainer}>
-            <Text style={styles.dreamsTitle}>Anotar sonhos</Text>
-            <Text style={styles.dreamsSubtitle}>Registre seus sonhos e explore significados</Text>
-          </View>
-          <Icon name="chevron-right" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.notesCard} onPress={() => navigation.navigate('DiarioPaciente')}>
           <View style={styles.notesIconWrapper}>
             <Icon name="edit-2" size={18} color="#B367D4" />
