@@ -187,16 +187,25 @@ const Relatorios = ({ navigation, paciente, standalone }) => {
 
   const renderRelatorioCard = (relatorio) => (
     <View key={relatorio.id} style={styles.relatorioCard}>
+      <TouchableOpacity 
+        style={styles.cardCloseButton} 
+        onPress={() => handleRemoverRelatorio(relatorio.id, relatorio.titulo)}
+      >
+        <Icon name="x" size={18} color="#94A3B8" />
+      </TouchableOpacity>
+
       <View style={styles.relatorioHeader}>
         <View style={[styles.tipoBadge, { backgroundColor: getTipoColor(relatorio.tipo) + '20' }]}>
           <Icon name={getTipoIcon(relatorio.tipo)} size={14} color={getTipoColor(relatorio.tipo)} />
           <Text style={[styles.tipoBadgeText, { color: getTipoColor(relatorio.tipo) }]}>{getTipoLabel(relatorio.tipo)}</Text>
         </View>
-        <Text style={styles.relatorioData}>{relatorio.data}</Text>
+        <Text style={[styles.relatorioData, { marginRight: 24 }]}>{relatorio.data}</Text>
       </View>
+
       <Text style={styles.relatorioTitulo}>{relatorio.titulo}</Text>
       <Text style={styles.relatorioPaciente}>{relatorio.pacienteNome}</Text>
       <Text style={styles.relatorioDescricao} numberOfLines={2}>{relatorio.descricao}</Text>
+
       <View style={styles.relatorioActions}>
         <TouchableOpacity style={styles.analisarBtn} onPress={() => handleAnalisarIA(relatorio)}>
           <Icon name="cpu" size={18} color="#B367D4" />
@@ -382,6 +391,14 @@ const Relatorios = ({ navigation, paciente, standalone }) => {
 };
 
 const styles = StyleSheet.create({
+  // Adicione junto aos outros estilos
+  cardCloseButton: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    zIndex: 10,
+    padding: 4, // aumenta a área de clique sem aumentar o ícone
+  },
   container: { flex: 1, backgroundColor: '#F6F6F8' },
   scrollView: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },

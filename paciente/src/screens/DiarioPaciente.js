@@ -309,7 +309,7 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
--        <View style={styles.ratingSection}>
+        <View style={styles.ratingSection}>
           <Text style={styles.ratingTitle}>Qual foi seu nível de humor hoje?</Text>
           <Text style={styles.ratingSubtitle}>1 = Muito mal | 10 = Muito bem</Text>
           <View style={styles.ratingContainer}>
@@ -335,8 +335,8 @@ const DiarioPaciente = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.ratingSection}>
-          <Text style={styles.ratingTitle}>O quanto isso impactou no seu dia?</Text>
+          <View style={styles.ratingSection}>
+            <Text style={styles.ratingTitle}>O quanto isso impactou no seu dia?</Text>
           <Text style={styles.ratingSubtitle}>1 = Pouco impacto | 5 = Muito impacto</Text>
           <View style={styles.impactContainer}>
             {[1, 2, 3, 4, 5].map((num) => (

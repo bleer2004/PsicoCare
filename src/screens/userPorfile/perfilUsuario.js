@@ -672,6 +672,39 @@ const DashboardPaciente = ({ navigation, route }) => {
     </ScrollView>
   );
 
+  // ── REMOVER ARQUIVO (LOCAL) ──────────────────────────────
+  const handleRemoverArquivo = (id, nome) => {
+    Alert.alert(
+      'Remover arquivo',
+      `Tem certeza que deseja remover "${nome}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => {
+            // Remove o arquivo do estado local instantaneamente
+            setArquivosList(prevList => prevList.filter(doc => doc.id !== id));
+            Alert.alert('Sucesso', 'Arquivo removido da lista.');
+            
+            /* TODO: Quando o endpoint estiver pronto:
+            try {
+              const token = await AsyncStorage.getItem('token');
+              await fetch(`${API_URL}/patients/${paciente.id}/documents/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              await carregarArquivos();
+            } catch {
+              Alert.alert('Erro', 'Não foi possível remover do servidor');
+            }
+            */
+          }
+        }
+      ]
+    );
+  };
+  
   // ── ABA ARQUIVOS ─────────────────────────────────────────
   const renderAbaArquivos = () => (
     <ScrollView style={styles.abaContainer} showsVerticalScrollIndicator={false}>
